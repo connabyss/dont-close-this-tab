@@ -122,7 +122,7 @@ header b{color:var(--ink);font-weight:600}
 @keyframes flyaway{35%{transform:scale(.25) translateY(-60vh)}50%{transform:scale(.25) translateY(-64vh) rotate(25deg)}100%{transform:none}}
 .walkoff{transition:transform 2.2s ease-in !important;transform:translateX(120vw) rotate(8deg) !important}
 #next{font-size:12px;color:var(--muted);text-align:center;margin-top:4px;min-height:1.2em}
-#toast{position:fixed;left:50%;top:14px;transform:translate(-50%,-200%);background:var(--red);color:#fff;font:700 13px ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:8px 14px;border-radius:6px;z-index:50;transition:transform .45s cubic-bezier(.2,1.6,.4,1)}
+#toast{position:fixed;left:50%;top:58px;transform:translate(-50%,-200%);background:var(--red);color:#fff;font:700 13px ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:8px 14px;border-radius:6px;z-index:50;transition:transform .45s cubic-bezier(.2,1.6,.4,1)}
 #toast.on{transform:translate(-50%,0)}
 #paint{position:fixed;inset:0;z-index:12;pointer-events:none;opacity:0;transition:opacity 1s}
 #paint.on{opacity:1}
@@ -199,12 +199,12 @@ body.room-office{--ink:#1d1b18;--muted:#5d5548;--line:#c9bfa9;--card:#fffaf0;--t
     <div id="bubble" class="piece" aria-live="polite">…</div>
     <div id="sub" class="mono piece"></div>
     <div id="replay" aria-live="polite"></div>
-    <div id="gamebox"><span id="gamerow"></span><span id="gameinfo"></span><br><button id="gJump" type="button">Jump (Space)</button><button id="gStop" type="button">Stop the game</button></div>
+    <div id="gamebox"><span id="gamerow"></span><span id="gameinfo"></span><br><button id="gJump" type="button">Jump (Space)</button><button id="gStop" type="button">Stop the game</button><button id="gShare" type="button">Copy my best</button></div>
 
     <div id="hud" class="mono">
       <span title="Coins">🪙 <b id="coins">0</b></span>
       <span title="Days in a row">🔥 <b id="streakN">1</b> <span id="streakWord">day</span></span>
-      <span class="moodbar" title="Mood: how much attention I've had lately"><i id="moodFill"></i></span><b id="moodPct">50%</b>
+      <span>mood</span><span class="moodbar" title="Mood: how much attention I've had lately"><i id="moodFill"></i></span><b id="moodPct">50%</b>
       <button id="shopBtn" type="button">Shop</button>
       <button id="playBtn" type="button">Title game</button>
       <button id="stareBtn" type="button">Staring contest</button>
@@ -366,7 +366,7 @@ const WAYS = [
   {id:"top",    name:"Went for the X", hint:"the X is up there somewhere"},
   {id:"away",   name:"Clicked another window", hint:"another window will do"},
   {id:"chase",  name:"Chased my button", hint:"there's a button here"},
-  {id:"caught", name:"Caught my button", hint:"it gets tired"},
+  {id:"caught", name:"Caught my button", hint:"chase my button till it gives up"},
   {id:"esc",    name:"Pressed Escape", hint:"a key with a hopeful name"},
   {id:"mod",    name:"Pressed " + MOD, hint:"half of a shortcut"},
   {id:"shrink", name:"Squeezed me", hint:"make me smaller"},
@@ -517,6 +517,7 @@ document.addEventListener("visibilitychange", () => {
     }, 2500);
   } else {
     clearInterval(hiddenTimer); favicon("open");
+    if (gameOn && !G.dead && !G.waiting){ G.waiting = true; setTimeout(() => say("Game paused while you were away.", "Press Space to carry on. Your score is safe: " + G.score + "."), 3000); }
     const gone = Date.now() - (awaySince || Date.now()); awaySince = null; blurAt = null; lastInput = Date.now();
     longest = Math.max(longest, gone);
     const wrecked = gone > 4000;
@@ -1009,7 +1010,7 @@ function startGame(){
 function stopGame(){ gameOn = false; clearInterval(G.tick); $("gamebox").classList.remove("on"); setTitle("(" + totalLog() + ") Don't Close This Tab"); }
 function gameStep(){
   if (document.hidden) return;
-  if (G.waiting){ setTitle("● press Space to play", true); $("gamerow").textContent = "● press Space"; $("gameinfo").textContent = "Best " + G.best + ". The game plays in the tab title. Space or the button to start."; return; }
+  if (G.waiting){ setTitle(G.score ? "❚❚ paused · " + G.score + " · space" : "● press Space to play", true); $("gamerow").textContent = G.score ? "❚❚ paused · " + G.score : "● press Space"; $("gameinfo").textContent = "Best " + G.best + ". The game plays in the tab title. Space or the button to start."; return; }
   if (!G.dead){
     G.obs = G.obs.map(o => o - 1).filter(o => o >= 0);
     G.hi = G.hi.map(o => o - 1).filter(o => o >= 0);
@@ -1025,7 +1026,7 @@ function gameStep(){
       G.dead = true; const before = G.runStartBest; G.best = Math.max(G.best, G.score); store.set("best", G.best);
       const prize = PRIZES.find(p => before < p.at && G.best >= p.at);
       earn(G.score - G.paid, "");
-      if (prize){ setTimeout(() => sayNow("You won me " + prize.name + "!", "For scoring " + p_at(prize) + " in the title game. I'm wearing it."), 2700); }
+      if (prize){ setTimeout(() => sayNow("You won me " + prize.name + "!", "For scoring " + p_at(prize) + " in the title game. I'm wearing it. You can take it off in the Shop."), 2700); }
       if (false){ toast("TITLE GAME PRIZE: " + prize.name.toUpperCase()); setTimeout(() => sayNow("You won me " + prize.name + "!", "For scoring " + p_at(prize) + " in the title game. I'm wearing it."), 2700); }
 
       sayNow(G.score > before && G.score > 0 ? "New best: " + G.score + "!" : "You crashed.", "Score " + G.score + ". Best " + G.best + ". Space to go again.");
@@ -1042,9 +1043,14 @@ function gameStep(){
   $("gamerow").textContent = G.dead ? "✖ crashed · " + G.score : row + "  " + G.score;
   $("gameinfo").textContent = (G.dead ? "Crashed. " : "") + "Score " + G.score + " · best " + G.best + "." + nextPrize() + " The game is up in the tab title.";
 }
-function gameJump(){ if (gameOn && G.waiting){ G.waiting = false; return; } if (!gameOn || G.dead){ $("gJump").textContent = "Jump (Space)"; startGame(); pointAtTitle(); return; } if (G.jump === 0) G.jump = 3; }
+function gameJump(){ if (gameOn && G.waiting){ G.waiting = false; G.calm = Math.max(G.calm, 4); return; } if (!gameOn || G.dead){ $("gJump").textContent = "Jump (Space)"; startGame(); pointAtTitle(); return; } if (G.jump === 0) G.jump = 3; }
 document.addEventListener("keydown", e => { if (gameOn && e.code === "Space"){ e.preventDefault(); gameJump(); } });
 $("gJump").onclick = gameJump;
+$("gShare").onclick = () => {
+  const txt = "My best in the game that runs inside a browser tab's title: " + G.best + ". " + location.href.split("#")[0];
+  const done = () => { $("gShare").textContent = "Copied"; setTimeout(() => $("gShare").textContent = "Copy my best", 2000); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, () => prompt("Copy this:", txt)); else prompt("Copy this:", txt);
+};
 $("gStop").onclick = () => { const sc = G.dead ? 0 : G.score; if (!G.dead) earn(G.score - G.paid, ""); G.paid = G.score; stopGame(); sayNow("Game over. By choice.", (sc ? "You scored " + sc + " and kept the coins. " : "") + "Your best is " + G.best + "."); };
 
 
@@ -1067,7 +1073,7 @@ if (!Array.isArray(owned)) owned = []; if (!Array.isArray(worn)) worn = [];
 function save(){ if (forgot) return; store.set("coins", coins); store.set("owned", owned); store.set("worn", worn); store.set("room", room); }
 function coinPop(n, why){
   const el = document.createElement("div"); el.id = "coinpop"; el.textContent = "+" + n + " 🪙";
-  const r = $("coins").getBoundingClientRect(); el.style.left = r.left + "px"; el.style.top = (r.top - 10) + "px";
+  const r = $("coins").getBoundingClientRect(); el.style.left = (r.left - 20) + "px"; el.style.top = (r.top - 52) + "px";
   document.body.appendChild(el); setTimeout(() => { el.style.transition = "transform 1.4s ease-in, opacity 1.4s ease-in"; el.style.transform = "translateY(-50px)"; el.style.opacity = 0; }, 1300);
   setTimeout(() => el.remove(), 2900);
 
