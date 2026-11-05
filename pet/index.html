@@ -1003,7 +1003,7 @@ function wearPrizes(){ const b = store.get("best", 0); PRIZES.forEach(p => { if 
 function nextPrize(){ const b = store.get("best", 0); const p = PRIZES.find(p => b < p.at); return p ? " Next prize at " + p.at + ": " + p.name + "." : " You've won every prize."; }
 const G = {len:14, x:2, obs:[], jump:0, score:0, tick:null, best:store.get("best", 0), dead:false};
 function startGame(){
-  G.runStartBest = G.best; gameOn = true; G.obs = []; G.jump = 0; G.calm = 8; G.paid = 0; G.score = 0; G.dead = false; G.waiting = true; $("gamebox").classList.add("on");
+  G.runStartBest = G.best; gameOn = true; G.obs = []; G.hi = []; G.jump = 0; G.calm = 8; G.paid = 0; G.score = 0; G.dead = false; G.waiting = true; $("gamebox").classList.add("on");
   G.speed = 270; clearInterval(G.tick); G.tick = setInterval(gameStep, G.speed); gameStep();
 }
 function stopGame(){ gameOn = false; clearInterval(G.tick); $("gamebox").classList.remove("on"); setTitle("(" + totalLog() + ") Don't Close This Tab"); }
@@ -1012,11 +1012,16 @@ function gameStep(){
   if (G.waiting){ setTitle("● press Space to play", true); $("gamerow").textContent = "● press Space"; $("gameinfo").textContent = "Best " + G.best + ". The game plays in the tab title. Space or the button to start."; return; }
   if (!G.dead){
     G.obs = G.obs.map(o => o - 1).filter(o => o >= 0);
-    const lastO = G.obs.length ? G.obs[G.obs.length - 1] : -99;
+    G.hi = G.hi.map(o => o - 1).filter(o => o >= 0);
+    const lastO = Math.max(G.obs.length ? G.obs[G.obs.length - 1] : -99, G.hi.length ? G.hi[G.hi.length - 1] : -99);
     if (G.calm > 0) G.calm--;
-    else if (G.len - 1 - lastO > 4 && Math.random() < 0.28) G.obs.push(G.len - 1);
+    else if (G.len - 1 - lastO > 4 && Math.random() < 0.28){
+      if (G.score >= 8 && Math.random() < 0.35){ G.hi.push(G.len - 1); if (!G.toldHi){ G.toldHi = true; toast("NEW: ✦ FLIES HIGH. DON'T JUMP"); } }
+      else G.obs.push(G.len - 1);
+    }
     if (G.jump > 0) G.jump--;
-    if (G.obs.includes(G.x) && G.jump === 0){
+    const hitHi = G.hi.includes(G.x) && G.jump > 0, passHi = G.hi.includes(G.x) && G.jump === 0;
+    if ((G.obs.includes(G.x) && G.jump === 0) || hitHi){
       G.dead = true; const before = G.runStartBest; G.best = Math.max(G.best, G.score); store.set("best", G.best);
       const prize = PRIZES.find(p => before < p.at && G.best >= p.at);
       earn(G.score - G.paid, "");
@@ -1024,7 +1029,7 @@ function gameStep(){
       if (false){ toast("TITLE GAME PRIZE: " + prize.name.toUpperCase()); setTimeout(() => sayNow("You won me " + prize.name + "!", "For scoring " + p_at(prize) + " in the title game. I'm wearing it."), 2700); }
 
       sayNow(G.score > before && G.score > 0 ? "New best: " + G.score + "!" : "You crashed.", "Score " + G.score + ". Best " + G.best + ". Space to go again.");
-    } else if (G.obs.includes(G.x)) {
+    } else if (G.obs.includes(G.x) || passHi) {
       G.score++; dayStat("best", G.score);
       if (G.score > G.best){ const before = G.best; G.best = G.score; store.set("best", G.best); const prize = PRIZES.find(p => before < p.at && G.best >= p.at); if (prize){ wearPrizes(); toast("TITLE GAME PRIZE: " + prize.name.toUpperCase()); } }
       job("run", G.score);
@@ -1032,7 +1037,7 @@ function gameStep(){
     }
   }
   let row = "";
-  for (let i = 0; i < G.len; i++) row += i === G.x ? (G.dead ? "✖" : G.jump ? "˚" : "●") : G.obs.includes(i) ? "▲" : "_";
+  for (let i = 0; i < G.len; i++) row += i === G.x ? (G.dead ? "✖" : G.jump ? "˚" : "●") : G.obs.includes(i) ? "▲" : G.hi.includes(i) ? "✦" : "_";
   setTitle(G.dead ? "✖ crashed · " + G.score + " · space" : row + " " + G.score, true);
   $("gamerow").textContent = G.dead ? "✖ crashed · " + G.score : row + "  " + G.score;
   $("gameinfo").textContent = (G.dead ? "Crashed. " : "") + "Score " + G.score + " · best " + G.best + "." + nextPrize() + " The game is up in the tab title.";
@@ -1097,7 +1102,7 @@ function renderShop(){
           coins -= it.cost; owned.push(it.id);
           if (kind === "room") room = it.id; else worn = wearOne(it.id);
           setMood("happy", 2500);
-          sayNow(kind === "room" ? "We moved!" : "For me?", kind === "room" ? "I live in " + it.name.toLowerCase() + " now. You paid " + it.cost + " coins." : it.name + ". " + it.cost + " coins. I'll wear it forever, or until you take it off.");
+          sayNow(kind === "room" ? ({attic:"We moved! It's dusty. I love it.", office:"We moved! I have a plant now.", beach:"We moved! I can't swim. I'm a tab.", space:"We moved! There's no tab bar out here."}[it.id] || "We moved!") : "For me?", kind === "room" ? "I live in " + it.name.toLowerCase() + " now. You paid " + it.cost + " coins." : it.name + ". " + it.cost + " coins. I'll wear it forever, or until you take it off.");
         } else if (kind === "room"){ room = on ? "" : it.id; }
         else { worn = on ? worn.filter(w => w !== it.id) : wearOne(it.id); }
         save(); applyOutfit(); renderShop(); renderHud();
@@ -1109,7 +1114,7 @@ function renderShop(){
 $("stareBtn").onclick = () => { if (stare) return; sayNow("Staring contest.", "Don't move your mouse for 8 seconds. Go."); stare = Date.now(); setMood("worried", 9000); lookAt(innerWidth/2, innerHeight/2); };
 $("shopBtn").onclick = () => { renderShop(); $("shop").classList.add("open"); };
 $("shopClose").onclick = () => $("shop").classList.remove("open");
-$("playBtn").onclick = () => { if (!gameOn) startGame(); pointAtTitle(); sayNow("Title game!", "It plays in my tab title. Space to jump. Every point is a coin. Every 5 points it gets faster."); };
+$("playBtn").onclick = () => { if (!gameOn) startGame(); pointAtTitle(); sayNow("Title game!", "It plays in my tab title. Jump over ▲ with Space. Every point is a coin. Every 5 points it gets faster."); };
 
 // mood: real attention. Goes up while you look at me, down by real time you're away or I'm closed.
 let mood01 = store.get("mood", 60);
