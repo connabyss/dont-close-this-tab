@@ -121,6 +121,19 @@ header b{color:var(--ink);font-weight:600}
 .flyaway{animation:flyaway 1.6s cubic-bezier(.5,0,.5,1) forwards}
 @keyframes flyaway{35%{transform:scale(.25) translateY(-60vh)}50%{transform:scale(.25) translateY(-64vh) rotate(25deg)}100%{transform:none}}
 .walkoff{transition:transform 2.2s ease-in !important;transform:translateX(120vw) rotate(8deg) !important}
+#next{font-size:12px;color:var(--muted);text-align:center;margin-top:4px;min-height:1.2em}
+#toast{position:fixed;left:50%;top:14px;transform:translate(-50%,-140%);background:var(--red);color:#fff;font:700 13px ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:8px 14px;border-radius:6px;z-index:50;transition:transform .45s cubic-bezier(.2,1.6,.4,1)}
+#toast.on{transform:translate(-50%,0)}
+#paint{position:fixed;inset:0;z-index:12;pointer-events:none;opacity:0;transition:opacity 1s}
+#paint.on{opacity:1}
+#frame{position:fixed;z-index:13;pointer-events:none;border:10px solid #8a5a2b;box-shadow:inset 0 0 0 3px #d9a85f,0 10px 30px rgba(0,0,0,.5);display:none}
+#frame.on{display:block}
+#frame .plaque{position:absolute;left:50%;bottom:-38px;transform:translateX(-50%);background:#d9a85f;color:#2a1d0e;font:600 12px ui-monospace,monospace;padding:3px 10px;white-space:nowrap;border-radius:2px}
+#gamebox{display:none;text-align:center;margin-top:8px;font:13px ui-monospace,Menlo,monospace;color:var(--muted)}
+#gamebox.on{display:block}
+#gamebox button{font:600 13px ui-monospace,monospace;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:5px;padding:5px 10px;cursor:pointer;margin:0 4px}
+.wave{animation:wave .9s ease}
+@keyframes wave{40%{transform:translateY(-26px) rotate(-6deg)}}
 </style>
 </head>
 <body>
@@ -134,6 +147,7 @@ header b{color:var(--ink);font-weight:600}
       <svg id="face" viewBox="-160 -150 320 260" aria-hidden="true">
         <path class="tabshape piece" d="M-150,100 L-150,100 Q-128,100 -122,70 L-104,-110 Q-100,-140 -70,-140 L70,-140 Q100,-140 104,-110 L122,70 Q128,100 150,100 Z"/>
         <g id="bandages"></g>
+        <g id="hat" style="display:none" transform="translate(40,-150) rotate(14)"><path d="M-34,8 L0,-70 L34,8 Z" fill="#c62a1f" stroke="var(--tabline)" stroke-width="4" stroke-linejoin="round"/><circle cy="-72" r="9" fill="#f5d04a" stroke="var(--tabline)" stroke-width="3"/><path d="M-22,-18 L22,-18 M-12,-42 L12,-42" stroke="#f5d04a" stroke-width="5"/></g>
         <g id="eyeL" transform="translate(-45,-45)">
           <circle class="eyeW" r="30"/><circle class="pupil" r="11"/>
           <path class="lid" d="M-32,0 A32,32 0 0 1 32,0 Z" transform="scale(1,0)"/>
@@ -155,9 +169,11 @@ header b{color:var(--ink);font-weight:600}
     <div id="bubble" class="piece" aria-live="polite">…</div>
     <div id="sub" class="mono piece"></div>
     <div id="replay" aria-live="polite"></div>
+    <div id="gamebox"><span id="gameinfo"></span><br><button id="gJump" type="button">Jump (Space)</button><button id="gStop" type="button">Stop the game</button></div>
 
     <div id="ways" class="piece"></div>
     <div id="secrets" class="mono piece"></div>
+    <div id="next" class="mono piece"></div>
     <div id="bottom" class="mono piece">
       <span><span>with me <b id="sTime">0s</b> · left <b id="sLeft">0</b> · visit <b id="sVisit">1</b></span><br><span id="honest">Nothing here can stop you closing this tab.</span></span>
       <span><button id="logBtn" type="button">Departure log (0)</button> <button id="forget" type="button">Forget me</button></span>
@@ -173,6 +189,9 @@ header b{color:var(--ink);font-weight:600}
 </svg>
 
 <button id="fake" type="button">Close tab ✕</button>
+<div id="toast"></div>
+<canvas id="paint"></canvas>
+<div id="frame"><div class="plaque"></div></div>
 
 <aside id="drawer" aria-label="Departure log">
   <h2>Departure log <button id="logClose" type="button" style="float:right">close</button></h2>
@@ -214,8 +233,9 @@ function dur(ms){
   if (h < 48) return h + "h " + (m%60) + "m";
   return Math.floor(h/24) + " days";
 }
-function secs(ms){ const s = Math.max(1, Math.round(ms/1000)); return s + (s===1?" second":" seconds"); }
+function secs(ms){ if (ms < 950) return "under a second"; const s = Math.max(1, Math.round(ms/1000)); return s + (s===1?" second":" seconds"); }
 function words(ms){
+  if (ms < 950) return "under a second";
   const s = Math.max(1, Math.round(ms/1000));
   if (s < 90) return secs(ms);
   const m = Math.round(s/60); if (m < 90) return m + " minutes";
@@ -378,7 +398,9 @@ function favicon(mode, frame){
 }
 favicon("open");
 let titleBit = null, hintShown = false;
-function setTitle(t){
+let gameOn = false;
+function setTitle(t, force){
+  if (gameOn && !force && !document.hidden) return; // the title game owns the title while it runs
   document.title = t;
   const m = document.getElementById("mirrorText"); if (m) m.textContent = t;
 }
@@ -507,7 +529,7 @@ document.addEventListener("mouseout", e => {
   $("app").classList.add("lookup"); $("faceWrap").classList.add("peek");
   setMood("panic", 3000); lookAt(e.clientX, -500); favicon("up");
   const TB = [["no", "no no", "no no no", "NO NO NO NO", "...please"], ["not the X", "NOT THE X", "anything but the X"], ["hi up there", "it's me. the tab", "I can feel your cursor"], ["you again", "my X is not for you", "(it is for you)"]];
-  titleShow(TB[Math.min((seen.top || 0), TB.length - 1)], 1200, () => favicon("open"));
+  titleShow(TB[Math.min((seen.top || 0), TB.length - 1)], 1700, () => favicon("open"));
   pointAtTitle(); const n = nth("top");
   sayNow(esc(["Look at the tab title.", "Not up there again.", "You know where the X is.", "Your cursor keeps going north.", "I'm out of ways to say no."], n), n === 1 ? "It's right next to your cursor." : "The title has opinions.");
   setTimeout(() => { $("app").classList.remove("lookup"); $("faceWrap").classList.remove("peek"); }, 3200);
@@ -581,14 +603,16 @@ document.addEventListener("copy", () => {
 // idle → asleep
 let lastInput = Date.now(), asleep = false;
 function wake(){
-  lastInput = Date.now();
-  if (asleep){ asleep = false; $("faceWrap").classList.remove("asleep"); lids(0); setMood("shock", 1200); sayNow("I wasn't asleep.", "You didn't move for " + words(sleptAt - sleepFrom + 45000) + "."); }
+  lastInput = Date.now(); drowsySaid = false; if (!asleep) lids(0);
+  if (asleep){ asleep = false; $("faceWrap").classList.remove("asleep"); lids(0); setMood("shock", 1200); sayNow("I wasn't asleep.", "You didn't move for " + words(sleptAt - sleepFrom + 20000) + "."); }
 }
-let sleptAt = 0, sleepFrom = 0;
+let sleptAt = 0, sleepFrom = 0, drowsySaid = false;
 ["mousemove","keydown","pointerdown","touchstart","wheel"].forEach(ev => addEventListener(ev, () => { if (asleep) sleptAt = Date.now(); wake(); }, {passive:true}));
 setInterval(() => {
   if (document.hidden || asleep || ended) return;
-  if (Date.now() - lastInput > 45000){ asleep = true; sleepFrom = Date.now(); lids(1.05); $("faceWrap").classList.add("asleep"); say("…", "Nothing from you for 45 seconds."); secret("sleep"); }
+  const idle = Date.now() - lastInput;
+  if (idle > 8000 && idle <= 20000 && !stare){ lids(Math.min(0.85, (idle - 8000) / 12000)); if (idle > 12000 && !drowsySaid){ drowsySaid = true; say("…getting… sleepy…", "You haven't moved in 12 seconds."); } }
+  if (idle > 20000){ asleep = true; sleepFrom = Date.now(); lids(1.05); $("faceWrap").classList.add("asleep"); say("z z z", "Nothing from you for 20 seconds. I fell asleep."); secret("sleep"); }
 }, 1000);
 
 addEventListener("mousemove", e => { if (!document.body.classList.contains("elsewhere") && !$("faceWrap").classList.contains("peek")) lookAt(e.clientX, e.clientY); dodgeCheck(e.clientX, e.clientY); }, {passive:true});
@@ -773,7 +797,7 @@ $("share").onclick = () => {
 };
 $("forget").onclick = () => {
   try { Object.keys(localStorage).filter(k => k.startsWith("dctt_")).forEach(k => localStorage.removeItem(k)); } catch(e){}
-  found = []; secrets = []; oldLog = []; forgot = true; renderWays(); renderSecrets(); drawBandages(0);
+  found = []; secrets = []; oldLog = []; forgot = true; viewMs = 0; stage = 0; improvAt = Infinity; $("hat").style.display = "none"; if (gameOn) stopGame(); $("gamebox").classList.remove("on"); renderWays(); renderSecrets(); drawBandages(0);
   sayNow("Forgotten.", "Your visits and your list are gone. This visit's log stays until you close me.");
 };
 
@@ -783,13 +807,152 @@ const prevTotal = store.get("totalMs", 0), prevLog = store.get("totalLog", 0);
 function heartbeat(){ if (forgot) return; store.set("lastSeen", Date.now()); store.set("lastStay", Date.now() - t0); store.set("totalMs", prevTotal + Date.now() - t0); store.set("totalLog", prevLog + incidents); }
 setInterval(heartbeat, 2000); addEventListener("pagehide", heartbeat);
 
+
+// ---------- the longer you stay ----------
+// Things unlock by how long this tab has been in view, added up over all your visits.
+let viewMs = store.get("viewMs", 0), lastTick = Date.now();
+setInterval(() => { const now = Date.now(); if (!document.hidden) viewMs += now - lastTick; lastTick = now; if (!forgot) store.set("viewMs", viewMs); }, 250);
+function toast(t){ const el = $("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("on"), 4500); }
+const busyNow = () => $("veil").classList.contains("on") || closing || document.hidden;
+
+// cursor trail, for the painting
+const trail = []; let travelled = 0, lastPt = null, clicks = 0, topExits = 0;
+addEventListener("mousemove", e => {
+  const now = Date.now();
+  if (lastPt){ travelled += Math.hypot(e.clientX - lastPt[0], e.clientY - lastPt[1]); if (now - lastPt[2] < 30) return; }
+  lastPt = [e.clientX, e.clientY, now]; trail.push([e.clientX / innerWidth, e.clientY / innerHeight]); if (trail.length > 6000) trail.shift();
+}, {passive:true});
+addEventListener("pointerdown", () => clicks++, {passive:true});
+document.addEventListener("mouseout", e => { if (!e.relatedTarget && !e.toElement && e.clientY <= 2) topExits++; });
+
+const STAGES = [
+  {at: 60e3, name:"a hat", run(){
+    $("hat").style.display = ""; setMood("happy", 3000); toast("UNLOCKED AT 1 MINUTE: A HAT");
+    sayNow("You've stayed a whole minute.", "I'm wearing a hat now. This is a celebration.");
+    log("Stayed 1 minute in view. Put on a hat.");
+  }},
+  {at: 120e3, name:"a painting", run(){
+    toast("UNLOCKED AT 2 MINUTES: ART");
+    const c = $("paint"); c.width = innerWidth * devicePixelRatio; c.height = innerHeight * devicePixelRatio;
+    c.style.width = innerWidth + "px"; c.style.height = innerHeight + "px";
+    const x = c.getContext("2d"); x.scale(devicePixelRatio, devicePixelRatio);
+    const W = Math.min(560, innerWidth - 60), H = Math.min(340, innerHeight - 200), L = (innerWidth - W)/2, T = (innerHeight - H)/2 - 20;
+    const f = $("frame"); Object.assign(f.style, {left:(L-10)+"px", top:(T-10)+"px", width:(W+20)+"px", height:(H+20)+"px"});
+    f.querySelector(".plaque").textContent = "“Where your mouse went” · " + Math.round(travelled).toLocaleString() + " px";
+    x.fillStyle = getComputedStyle(document.body).backgroundColor; x.fillRect(L, T, W, H);
+    x.lineWidth = 2.2; x.lineCap = "round"; x.lineJoin = "round";
+    const pts = trail.slice(); let i = 1;
+    c.classList.add("on"); f.classList.add("on");
+    const step = () => {
+      for (let k = 0; k < 40 && i < pts.length; k++, i++){
+        x.strokeStyle = `hsl(${(i / pts.length) * 300}, 75%, 58%)`;
+        x.beginPath(); x.moveTo(L + pts[i-1][0]*W, T + pts[i-1][1]*H); x.lineTo(L + pts[i][0]*W, T + pts[i][1]*H); x.stroke();
+      }
+      if (i < pts.length) requestAnimationFrame(step);
+    };
+    step();
+    sayNow("I painted where your mouse went.", "All " + Math.round(travelled).toLocaleString() + " pixels of it, in the order you went.");
+    say("Gorgeous.", topExits ? "The lines at the top are the " + topExits + (topExits === 1 ? " time" : " times") + " you went for the X." : "You never once went for the X. I'm touched.");
+    log("Stayed 2 minutes. Painted your cursor's path: " + Math.round(travelled) + " px.");
+    setTimeout(() => { c.classList.remove("on"); f.classList.remove("on"); }, 11000);
+  }},
+  {at: 180e3, name:"a game in my tab title", run(){
+    toast("UNLOCKED AT 3 MINUTES: A GAME");
+    sayNow("I made you a game.", "It's in my tab title. Look up. Press Space to jump.");
+    pointAtTitle(); startGame();
+    log("Stayed 3 minutes. Started a game in the tab title.");
+  }},
+  {at: 300e3, name:"I improvise", run(){
+    toast("5 MINUTES: NOBODY STAYS THIS LONG");
+    setMood("shock", 2500);
+    sayNow("Five minutes.", "I didn't plan anything past this. I'll improvise.");
+    log("Stayed 5 minutes. Out of plans. Improvising.");
+    improvAt = viewMs + 25e3;
+  }}
+];
+let stage = 0, improvAt = Infinity;
+// already unlocked on an earlier visit: keep the hat, keep the game on a button
+while (stage < STAGES.length && viewMs >= STAGES[stage].at) stage++;
+if (stage >= 1) $("hat").style.display = "";
+if (stage >= 3){ $("gamebox").classList.add("on"); $("gameinfo").textContent = "Best " + G_best() + ". The game plays in the tab title."; $("gJump").textContent = "Play the title game"; }
+if (stage >= 4) improvAt = viewMs + 30e3;
+function G_best(){ return store.get("best", 0); }
+function nextText(){
+  if (stage >= STAGES.length) return "From here on, every so often, I'll make something up.";
+  const left = STAGES[stage].at - viewMs;
+  return "Next surprise in " + dur(Math.max(0, left)) + " of looking at me." + (visit > 1 && viewMs > 5e3 ? " (Time from your earlier visits counts.)" : "");
+}
+setInterval(() => {
+  $("next").textContent = ended ? "" : nextText();
+  if (viewMs > 90e3 && !renderSecrets.hinted){ renderSecrets.hinted = true; renderSecrets(); }
+  if (busyNow() || ended) return;
+  if (stage < STAGES.length && viewMs >= STAGES[stage].at){ STAGES[stage].run(); stage++; return; }
+  if (viewMs >= improvAt){ improvise(); improvAt = viewMs + rnd(35e3, 50e3); }
+}, 500);
+
+// improvised bits after 5 minutes; each says only true things
+const IMPROV = [
+  () => { const last = oldLog.slice(-3).reverse(); sayNow("A dramatic reading of my log.", ""); last.forEach(e => say("“" + e[2] + "”", "Entry #" + e[0] + ".")); say("Thank you.", ""); },
+  () => { document.querySelectorAll(".way").forEach((w, i) => setTimeout(() => { w.classList.remove("wave"); void w.offsetWidth; w.classList.add("wave"); }, i * 90)); sayNow("I'm juggling your attempts.", found.length + " of them. Badly."); },
+  () => { sayNow("Staring contest.", "Don't move your mouse for 8 seconds. Go."); stare = Date.now(); setMood("worried", 9000); lookAt(innerWidth/2, innerHeight/2); },
+  () => { titleShow(["♪ don't", "♪ don't close", "♪ don't close me", "♪ I'm just a tab ♪", "♪ in your browser ♪", "♪ (" + leftCount + " leaves) ♪"], 1300); pointAtTitle(); sayNow("I wrote a song.", "It's in my tab title. It's short."); },
+  () => { const w = Math.round(travelled / innerWidth * 10) / 10; sayNow("Fun fact.", "Your mouse has crossed " + w + " screen widths since you got here."); },
+  () => { sayNow("Can I ask you something?", "You've clicked " + clicks + " times on this page. What were you hoping for?"); },
+  () => { $("faceWrap").classList.remove("squish"); void $("faceWrap").offsetWidth; $("faceWrap").classList.add("squish"); sayNow("Stretching.", "I've been open for " + dur(Date.now() - t0) + "."); },
+  () => { sayNow("Your departure log has " + totalLog() + " entries.", "I'd frame it, but I already framed your mouse."); }
+];
+let improvOrder = [], stare = 0;
+function improvise(){
+  if (!improvOrder.length) improvOrder = IMPROV.map((_, i) => i).sort(() => Math.random() - .5);
+  IMPROV[improvOrder.pop()]();
+}
+addEventListener("mousemove", () => {
+  if (!stare) return;
+  const held = Date.now() - stare; stare = 0;
+  if (held < 8000){ setMood("happy", 2000); sayNow("You moved!", "After " + secs(held) + ". I win."); log("Lost a staring contest after " + secs(held) + "."); }
+}, {passive:true});
+setInterval(() => { if (stare && Date.now() - stare >= 8000){ stare = 0; blink(); setMood("sulk", 2000); sayNow("Fine. You win.", "8 seconds without moving. I blinked."); log("Won a staring contest."); } }, 300);
+
+// ---------- the game in the tab title ----------
+const G = {len:14, x:2, obs:[], jump:0, score:0, tick:null, best:store.get("best", 0), dead:false};
+function startGame(){
+  gameOn = true; G.obs = []; G.jump = 0; G.score = 0; G.dead = false; G.waiting = true; $("gamebox").classList.add("on");
+  clearInterval(G.tick); G.tick = setInterval(gameStep, 230); gameStep();
+}
+function stopGame(){ gameOn = false; clearInterval(G.tick); $("gamebox").classList.remove("on"); setTitle("(" + totalLog() + ") Don't Close This Tab"); }
+function gameStep(){
+  if (document.hidden) return;
+  if (G.waiting){ setTitle("● press Space to play", true); $("gameinfo").textContent = "Best " + G.best + ". The game plays in the tab title. Space or the button to start."; return; }
+  if (!G.dead){
+    G.obs = G.obs.map(o => o - 1).filter(o => o >= 0);
+    const lastO = G.obs.length ? G.obs[G.obs.length - 1] : -99;
+    if (G.len - 1 - lastO > 3 && Math.random() < 0.33) G.obs.push(G.len - 1);
+    if (G.jump > 0) G.jump--;
+    if (G.obs.includes(G.x) && G.jump === 0){
+      G.dead = true; G.best = Math.max(G.best, G.score); store.set("best", G.best);
+      log("Title game: crashed with a score of " + G.score + ".");
+      sayNow(G.score >= G.best && G.score > 0 ? "New best: " + G.score + "!" : "You crashed.", "Score " + G.score + ". Best " + G.best + ". Space to go again.");
+    } else if (G.obs.includes(G.x)) { G.score++; }
+  }
+  let row = "";
+  for (let i = 0; i < G.len; i++) row += i === G.x ? (G.dead ? "✖" : G.jump ? "˚" : "●") : G.obs.includes(i) ? "▲" : "_";
+  setTitle(G.dead ? "✖ crashed · " + G.score + " · space" : row + " " + G.score, true);
+  $("gameinfo").textContent = (G.dead ? "Crashed. " : "") + "Score " + G.score + " · best " + G.best + ". The game is up in the tab title.";
+}
+function gameJump(){ if (gameOn && G.waiting){ G.waiting = false; return; } if (!gameOn || G.dead){ $("gJump").textContent = "Jump (Space)"; startGame(); pointAtTitle(); return; } if (G.jump === 0) G.jump = 3; }
+document.addEventListener("keydown", e => { if (gameOn && e.code === "Space"){ e.preventDefault(); gameJump(); } });
+$("gJump").onclick = gameJump;
+$("gStop").onclick = () => { stopGame(); sayNow("Game over. By choice.", "Your best was " + G.best + "."); };
+
 // ---------- start ----------
 // ---------- secrets ----------
 const SECRETS = {poke:"Poked me", menu:"Right-clicked", sleep:"Let me fall asleep", copy:"Copied my words", all:"Selected everything"};
 let secrets = store.get("secrets", []); if (!Array.isArray(secrets)) secrets = [];
 function renderSecrets(){
   const n = secrets.length, t = Object.keys(SECRETS).length;
-  $("secrets").textContent = n ? "Secret ways: " + n + " of " + t + " (" + secrets.map(k => SECRETS[k]).join(", ") + ")" : "There are also " + t + " secret ways. Nothing on this page tells you what they are.";
+  const HINTS = {poke:"touch my face", menu:"the other mouse button", sleep:"let me rest", copy:"take my words", all:"all of me at once"};
+  const hint = (typeof viewMs !== "undefined" && viewMs > 90e3) ? " Hints: " + Object.keys(SECRETS).filter(k => !secrets.includes(k)).map(k => HINTS[k]).join(" · ") : "";
+  $("secrets").textContent = (n ? "Secret ways: " + n + " of " + t + " (" + secrets.map(k => SECRETS[k]).join(", ") + ")." : "There are also " + t + " secret ways.") + (n < t ? hint : "");
 }
 function secret(id){ if (secrets.includes(id)) return false; secrets.push(id); if (!forgot) store.set("secrets", secrets); renderSecrets(); log("Secret found: " + SECRETS[id] + "."); return true; }
 $("face").addEventListener("click", () => {
@@ -833,9 +996,7 @@ function drawBandages(n){
     if (found.length) say(found.length + " of 10 found.", "Your list is still here.");
     return;
   }
-  say("Hi. I'm a tab.", "");
-  say("Please don't close me.", "");
-  say("You're going to try anyway.", "There are 10 ways I can notice. Find them all.");
+  say("Hi. I'm a tab. Please don't close me.", "You'll try anyway. There are 10 ways I can notice. Find them.");
 })();
 })();
 </script>
