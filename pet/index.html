@@ -158,6 +158,8 @@ body.room-space{--bg:#15140f;--ink:#efe9dd;--muted:#a39b8c;--line:#3a362d;--card
 body.room-office{--ink:#1d1b18;--muted:#5d5548;--line:#c9bfa9;--card:#fffaf0;--tab:#fffdf8;--tabline:#1d1b18;background-color:#d9dde2;--bg:#d9dde2}
 #roomdeco{position:fixed;inset:0;pointer-events:none;z-index:-1;font-size:46px}
 #roomdeco span{position:absolute;opacity:.85}
+#plant{position:absolute;left:-18%;bottom:2%;font-size:clamp(28px,4vw,44px)}
+#bonusways{font-size:12px;color:var(--muted);text-align:center;margin-top:4px}
 </style>
 </head>
 <body>
@@ -310,6 +312,7 @@ function pump(){
   busy = true;
   const [t, s] = q.shift();
   $("bubble").textContent = t; $("sub").textContent = s;
+  if (window.__rpAt && Date.now() - window.__rpAt > 3000){ $("replay").classList.remove("on"); window.__rpAt = 0; }
   shownAt = Date.now();
   const hold = Math.max(2600, (t.length + s.length) * 62);
   holdTimer = setTimeout(() => { busy = false; pump(); }, hold);
@@ -660,7 +663,7 @@ document.addEventListener("copy", () => {
 // idle → asleep
 let lastInput = Date.now(), asleep = false;
 function wake(){
-  lastInput = Date.now(); drowsySaid = false; if (!asleep) lids(0);
+  lastInput = Date.now(); drowsySaid = false; if (!asleep){ lids(0); if (!$("cobweb").classList.contains("on")) $("faceWrap").classList.remove("asleep"); }
   if (asleep){ asleep = false; $("faceWrap").classList.remove("asleep"); lids(0); setMood("shock", 1200); sayNow("I'm up! I'm up.", "You didn't move for " + words(sleptAt - sleepFrom + 20000) + ". I napped."); }
 }
 let sleptAt = 0, sleepFrom = 0, drowsySaid = false, lastSleepy = -1e9;
@@ -934,7 +937,7 @@ const STAGES = [
     };
     step();
     sayNow("I painted where your mouse went.", "All " + Math.round(travelled).toLocaleString() + " pixels of it, in the order you went.");
-    say("Gorgeous.", topExits ? "The lines at the top are the " + topExits + (topExits === 1 ? " time" : " times") + " you went for the X." : "You never once went for the X. I'm touched.");
+    say("Gorgeous.", topExits ? "The lines at the top are the " + topExits + (topExits === 1 ? " time" : " times") + " you went for the X." : "This visit, you haven't gone for the X once. I'm touched.");
     log("Stayed 2 minutes. Painted your cursor's path: " + Math.round(travelled) + " px.");
     setTimeout(() => { c.classList.remove("on"); f.classList.remove("on"); }, 11000);
   }},
@@ -998,7 +1001,7 @@ addEventListener("mousemove", () => {
 setInterval(() => { if (stare && Date.now() - stare >= 8000){ stare = 0; blink(); setMood("sulk", 2000); sayNow("Fine. You win.", "8 seconds without moving. I blinked."); log("Won a staring contest."); job("stare"); } }, 300);
 
 // ---------- the game in the tab title ----------
-const PRIZES = [{at:5, name:"sunglasses", el:"shades"}, {at:10, name:"a gold hat", el:"gold"}, {at:20, name:"a crown", el:"crown"}, {at:35, name:"a monocle", el:"monocle"}];
+const PRIZES = [{at:10, name:"sunglasses", el:"shades"}, {at:25, name:"a gold hat", el:"gold"}, {at:45, name:"a crown", el:"crown"}, {at:70, name:"a monocle", el:"monocle"}];
 function p_at(p){ return p.at + "+"; }
 function wearPrizes(){ const b = store.get("best", 0); PRIZES.forEach(p => { if (b >= p.at && typeof gift === "function") gift(p.el); }); }
 function nextPrize(){ const b = store.get("best", 0); const p = PRIZES.find(p => b < p.at); return p ? " Next prize at " + p.at + ": " + p.name + "." : " You've won every prize."; }
@@ -1034,7 +1037,7 @@ function gameStep(){
       G.score++; dayStat("best", G.score);
       if (G.score > G.best){ const before = G.best; G.best = G.score; store.set("best", G.best); const prize = PRIZES.find(p => before < p.at && G.best >= p.at); if (prize){ wearPrizes(); toast("TITLE GAME PRIZE: " + prize.name.toUpperCase()); } }
       job("run", G.score);
-      if (G.score % 5 === 0){ earn(G.score - G.paid, ""); G.paid = G.score; if (G.speed > 130){ G.speed -= 20; clearInterval(G.tick); G.tick = setInterval(gameStep, G.speed); toast("FASTER"); } }
+      if (G.score % 5 === 0){ earn(G.score - G.paid, ""); G.paid = G.score; if (G.speed > 90){ G.speed -= G.speed > 150 ? 20 : 10; clearInterval(G.tick); G.tick = setInterval(gameStep, G.speed); toast("FASTER"); } }
     }
   }
   let row = "";
@@ -1208,7 +1211,7 @@ function runDaily(){
       if (firstEver){ toast("WELCOME: +25 COINS"); say("Here. 25 coins.", "Spend them in the Shop, on me. There are 3 new jobs every day for more."); return; }
       toast(streakN > 1 ? "DAY " + streakN + " IN A ROW: +" + bonus + " COINS" : "FIRST VISIT TODAY: +" + bonus + " COINS");
       if (streakN > 1) say("Day " + streakN + " in a row.", "That's +" + bonus + " coins. " + (bonus < 50 ? "Come back tomorrow and it goes up, to a max of 50." : "That's the max. It stays at 50 a day while the streak lasts."));
-      else say("+" + bonus + " coins for visiting today.", "Come back tomorrow for more. Two days in a row pays 20.");
+      else say("+" + bonus + " coins for visiting today.", "Come back tomorrow: two days in a row pays 20, and my plant grows.");
     }, 2500);
   }
   renderDaily();
@@ -1223,8 +1226,42 @@ function runStreak(){
   const day = new Date().toDateString(), last = store.get("lastDay", ""), y = new Date(Date.now() - 864e5).toDateString();
   let n = store.get("streak", 0);
   if (last !== day){ n = last === y ? n + 1 : 1; store.set("streak", n); store.set("lastDay", day); }
-  if (n > 1){ $("honest").textContent = "Day streak: " + n + " days in a row. Nothing here can stop you closing this tab."; }
+  if (n > 1){ $("honest").textContent = "Day streak: " + n + " days in a row. Miss a day and it goes back to 1."; }
+  let days = store.get("daysSeen", 0); if (store.get("lastCounted", "") !== day){ days++; store.set("daysSeen", days); store.set("lastCounted", day); }
+  daysSeen = days; drawPlant(); renderBonus();
 }
+// a plant that grows one stage for each different day you've visited
+let daysSeen = 1;
+const PLANT = ["🌰", "🌱", "🌿", "🪴", "🌳", "🌸"];
+function drawPlant(){
+  let el = $("plant"); if (!el){ el = document.createElement("div"); el.id = "plant"; $("faceWrap").appendChild(el); }
+  const stage = Math.min(PLANT.length - 1, daysSeen - 1);
+  el.textContent = PLANT[stage]; el.title = "Grows on each different day you visit. Days so far: " + daysSeen + ".";
+}
+// extra ways that only open up on later days
+const BONUS = [
+  {id:"print", day:2, name:"Tried to print me", hint:"put me on paper"},
+  {id:"zoom", day:2, name:"Zoomed me", hint:"make me bigger or smaller, not the window"},
+  {id:"wkey", day:3, name:"Pressed W alone", hint:"the other half of a shortcut"},
+  {id:"full", day:3, name:"Went full screen", hint:"hide the tab bar"},
+  {id:"dbl", day:4, name:"Double-clicked me", hint:"two quick taps on my face"}
+];
+let bonusFound = store.get("bonus", []); if (!Array.isArray(bonusFound)) bonusFound = [];
+function renderBonus(){
+  let el = $("bonusways"); if (!el){ el = document.createElement("div"); el.id = "bonusways"; el.className = "mono"; $("secrets").after(el); }
+  const open = BONUS.filter(b => daysSeen >= b.day), next = BONUS.find(b => daysSeen < b.day);
+  el.textContent = (open.length ? "Later-day ways: " + open.map(b => bonusFound.includes(b.id) ? "✓ " + b.name : "? " + b.hint).join("  ·  ") + "." : "") +
+    (next ? " More ways open on day " + next.day + " of visiting." : " That's all of them.");
+}
+function bonus(id){
+  const b = BONUS.find(b => b.id === id); if (!b || daysSeen < b.day || bonusFound.includes(id)) return false;
+  bonusFound.push(id); if (!forgot) store.set("bonus", bonusFound); renderBonus(); attempt(); log("Later-day way: " + b.name + "."); earn(20, ""); toast("LATER-DAY WAY: " + b.name.toUpperCase()); return true;
+}
+addEventListener("beforeprint", () => { if (bonus("print")) sayNow("You tried to PRINT me?", "I'd still be open. Just also on paper."); });
+let dpr0 = devicePixelRatio;
+addEventListener("resize", () => { if (devicePixelRatio !== dpr0){ dpr0 = devicePixelRatio; if (bonus("zoom")) sayNow("Whoa. Zoom.", "I'm a different size now. Still the same tab."); } if (innerWidth >= screen.width && innerHeight >= screen.height - 2){ if (bonus("full")) sayNow("Full screen!", "Now neither of us can see the tab bar."); } });
+document.addEventListener("keydown", e => { if ((e.key === "w" || e.key === "W") && !e.ctrlKey && !e.metaKey){ if (bonus("wkey")) sayNow("Just W?", "Without " + MOD + "? That does nothing. You know that, right?"); } });
+$("face").addEventListener("dblclick", () => { if (bonus("dbl")) sayNow("Double poke.", "That counts as a way. Don't ask me why."); });
 runStreak(); runDaily();
 setInterval(() => { if (new Date().toDateString() !== today){ setDay(); runStreak(); runDaily(); } }, 20000);
 // ---------- start ----------
