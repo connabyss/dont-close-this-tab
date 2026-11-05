@@ -150,11 +150,6 @@ header b{color:var(--ink);font-weight:600}
       <svg id="face" viewBox="-160 -235 320 345" aria-hidden="true">
         <path class="tabshape piece" d="M-150,100 L-150,100 Q-128,100 -122,70 L-104,-110 Q-100,-140 -70,-140 L70,-140 Q100,-140 104,-110 L122,70 Q128,100 150,100 Z"/>
         <g id="bandages"></g>
-        <g id="shades" style="display:none"><rect x="-80" y="-62" width="66" height="34" rx="10" fill="#111"/><rect x="14" y="-62" width="66" height="34" rx="10" fill="#111"/><path d="M-14,-50 L14,-50" stroke="#111" stroke-width="6"/></g>
-        <g id="gold" style="display:none" transform="translate(40,-150) rotate(14)"><path d="M-34,8 L0,-70 L34,8 Z" fill="#f5c542" stroke="var(--tabline)" stroke-width="4" stroke-linejoin="round"/><circle cy="-72" r="9" fill="#fff" stroke="var(--tabline)" stroke-width="3"/></g>
-        <g id="crown" style="display:none" transform="translate(-40,-150) rotate(-10)"><path d="M-36,10 L-36,-30 L-18,-8 L0,-40 L18,-8 L36,-30 L36,10 Z" fill="#f5c542" stroke="var(--tabline)" stroke-width="4" stroke-linejoin="round"/></g>
-        <g id="monocle" style="display:none"><circle cx="45" cy="-45" r="36" fill="none" stroke="#f5c542" stroke-width="5"/><path d="M78,-35 Q95,10 80,60" fill="none" stroke="#f5c542" stroke-width="3"/></g>
-        <g id="hat" style="display:none" transform="translate(40,-150) rotate(14)"><path d="M-34,8 L0,-70 L34,8 Z" fill="#c62a1f" stroke="var(--tabline)" stroke-width="4" stroke-linejoin="round"/><circle cy="-72" r="9" fill="#f5d04a" stroke="var(--tabline)" stroke-width="3"/><path d="M-22,-18 L22,-18 M-12,-42 L12,-42" stroke="#f5d04a" stroke-width="5"/></g>
         <g id="eyeL" transform="translate(-45,-45)">
           <circle class="eyeW" r="30"/><circle class="pupil" r="11"/>
           <path class="lid" d="M-32,0 A32,32 0 0 1 32,0 Z" transform="scale(1,0)"/>
@@ -169,6 +164,11 @@ header b{color:var(--ink);font-weight:600}
         <path class="sweat" id="sw1" d="M95,-80 q-8,14 0,18 q8,-4 0,-18z"/>
         <path class="sweat" id="sw2" d="M-98,-60 q-8,14 0,18 q8,-4 0,-18z"/>
         <path class="sweat" id="sw3" d="M100,-20 q-8,14 0,18 q8,-4 0,-18z"/>
+        <g id="shades" style="display:none"><rect x="-82" y="-72" width="74" height="46" rx="14" fill="#0b0b0b" stroke="var(--tabline)" stroke-width="4"/><rect x="8" y="-72" width="74" height="46" rx="14" fill="#0b0b0b" stroke="var(--tabline)" stroke-width="4"/><path d="M-8,-56 L8,-56" stroke="var(--tabline)" stroke-width="5"/><path d="M-70,-62 L-52,-62 M20,-62 L38,-62" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".7"/></g>
+        <g id="gold" style="display:none" transform="translate(40,-150) rotate(14)"><path d="M-34,8 L0,-70 L34,8 Z" fill="#f5c542" stroke="var(--tabline)" stroke-width="4" stroke-linejoin="round"/><circle cy="-72" r="9" fill="#fff" stroke="var(--tabline)" stroke-width="3"/></g>
+        <g id="crown" style="display:none" transform="translate(-40,-150) rotate(-10)"><path d="M-36,10 L-36,-30 L-18,-8 L0,-40 L18,-8 L36,-30 L36,10 Z" fill="#f5c542" stroke="var(--tabline)" stroke-width="4" stroke-linejoin="round"/></g>
+        <g id="monocle" style="display:none"><circle cx="45" cy="-45" r="36" fill="none" stroke="#f5c542" stroke-width="5"/><path d="M78,-35 Q95,10 80,60" fill="none" stroke="#f5c542" stroke-width="3"/></g>
+        <g id="hat" style="display:none" transform="translate(40,-150) rotate(14)"><path d="M-34,8 L0,-70 L34,8 Z" fill="#c62a1f" stroke="var(--tabline)" stroke-width="4" stroke-linejoin="round"/><circle cy="-72" r="9" fill="#f5d04a" stroke="var(--tabline)" stroke-width="3"/><path d="M-22,-18 L22,-18 M-12,-42 L12,-42" stroke="#f5d04a" stroke-width="5"/></g>
       </svg>
       <div id="zzz">z z</div>
     </div>
@@ -646,9 +646,9 @@ function placeFake(el, x, y){
 }
 function keepFakeOnScreen(){ const r = fake.getBoundingClientRect(); placeFake(fake, r.left, r.top); }
 function covered(x, y, w, h){ // would a box here sit on the face or any line of text?
-  return ["bubble", "sub", "replay", "faceWrap", "tabmirror", "ways", "secrets", "next", "bottom", "gamebox"].some(id => {
+  return ["bubble", "sub", "replay", "faceWrap", "tabmirror", "ways", "secrets", "next", "bottom", "gamebox", "hud", "daily"].some(id => {
     const el = $(id); if (!el) return false; const r = el.getBoundingClientRect();
-    if (id === "bubble" || id === "sub" || id === "replay"){ // only the text itself, not the empty width
+    if (["bubble", "sub", "replay", "secrets", "next", "daily"].includes(id)){ // only the text itself, not the empty width
       const range = document.createRange(); range.selectNodeContents(el); const t = range.getBoundingClientRect();
       if (!t.width) return false;
       return !(x + w < t.left - 10 || x > t.right + 10 || y + h < t.top - 10 || y > t.bottom + 10);
@@ -657,7 +657,7 @@ function covered(x, y, w, h){ // would a box here sit on the face or any line of
   });
 }
 function farFrom(mx, my){
-  const w = 190, h = 44;
+  const w = Math.max(190, fake.offsetWidth + 40), h = fake.offsetHeight + 56; // room for the tilt
   let best = null, bd = -1, fallback = [20, 20], fd = -1;
   for (let i = 0; i < 60; i++){
     const x = rnd(8, Math.max(9, innerWidth - w - 8)), y = rnd(8, Math.max(9, innerHeight - h - 8)), d = Math.hypot(x - mx, y - my);
@@ -704,10 +704,15 @@ function dodgeCheck(mx, my, force){
     sayNow("It's hiding behind me.", "I didn't agree to this.");
   }
   if (trick === "tired"){
-    tired = true; const ts = farFrom(innerWidth/2, innerHeight/2); placeFake(fake, ts[0], ts[1]); fake.classList.add("tired"); fake.textContent = "Close tab ✕ (tired)";
+    tired = true; fake.classList.add("tired"); fake.textContent = "Close tab ✕ (tired)"; const ts = farFrom(innerWidth/2, innerHeight/2); placeFake(fake, ts[0] + 20, ts[1] + 28); fake.textContent = "Close tab ✕ (tired)";
     sayNow("It's exhausted.", "It ran " + dodges + " times. You can catch it now.");
   }
 }
+setInterval(() => { // if the page shifts under it, step off the text
+  if (!tired || $("veil").classList.contains("on")) return;
+  const r = fake.getBoundingClientRect();
+  if (covered(r.left - 10, r.top - 14, r.width + 20, r.height + 28)){ const ts = farFrom(innerWidth/2, innerHeight/2); placeFake(fake, ts[0] + 20, ts[1] + 28); }
+}, 1500);
 fake.addEventListener("touchstart", e => { if (tired) return; e.preventDefault(); const t = e.touches[0]; dodgeCheck(t.clientX, t.clientY); }, {passive:false});
 fake.addEventListener("mousedown", e => { if (!tired && e.button === 0){ e.preventDefault(); fake.dataset.dodged = "1"; dodgeCheck(e.clientX, e.clientY, true); } });
 fake.addEventListener("click", e => {
