@@ -151,7 +151,7 @@ header b{color:var(--ink);font-weight:600}
 .item button.owned{background:var(--card);color:var(--ink)}
 .item button:disabled{opacity:.4;cursor:default}
 .item small{display:block;color:var(--muted)}
-#daily{font-size:12px;color:var(--muted);text-align:center;margin-top:4px}
+#daily{font-size:13px;color:var(--ink);text-align:center;margin-top:6px;font-weight:600}
 body.room-attic{--bg:#15140f;--ink:#efe9dd;--muted:#a39b8c;--line:#3a362d;--card:#211f19;--tab:#2a2720;--tabline:#efe9dd;background-color:#2a2116}
 body.room-beach{--ink:#1d1b18;--muted:#5d5548;--line:#c9bfa9;--card:#fffaf0;--tab:#fffdf8;--tabline:#1d1b18;background-color:#f2dfb0;--bg:#f2dfb0}
 body.room-space{--bg:#15140f;--ink:#efe9dd;--muted:#a39b8c;--line:#3a362d;--card:#211f19;--tab:#2a2720;--tabline:#efe9dd;background-color:#07081a;background-image:radial-gradient(1px 1px at 20% 30%,#fff,transparent),radial-gradient(1px 1px at 70% 20%,#fff,transparent),radial-gradient(2px 2px at 40% 70%,#fff,transparent),radial-gradient(1px 1px at 85% 60%,#fff,transparent),radial-gradient(1px 1px at 10% 85%,#fff,transparent),radial-gradient(1.5px 1.5px at 55% 45%,#fff,transparent)}
@@ -207,6 +207,7 @@ body.room-office{--ink:#1d1b18;--muted:#5d5548;--line:#c9bfa9;--card:#fffaf0;--t
       <span class="moodbar" title="Mood: how much attention I've had lately"><i id="moodFill"></i></span><b id="moodPct">50%</b>
       <button id="shopBtn" type="button">Shop</button>
       <button id="playBtn" type="button">Title game</button>
+      <button id="stareBtn" type="button">Staring contest</button>
     </div>
     <div id="ways" class="piece"></div>
     <div id="secrets" class="mono piece"></div>
@@ -492,7 +493,7 @@ function esc(lines, n){ return n <= lines.length ? lines[n - 1] : TAILS[(n - lin
 let saidWhileAway = [];
 document.addEventListener("visibilitychange", () => {
   if (document.hidden){
-    awaySince = Date.now(); leftCount++; attempt(); if (typeof dayStat === "function") dayStat("leaves", 1);
+    awaySince = Date.now(); leftCount++; attempt(); if (typeof dayStat === "function") dayStat("leaves", 1); if (typeof job === "function") job("leave");
     clearInterval(titleBit); titleBit = null; saidWhileAway = [];
     const g = () => dur(Date.now() - awaySince);
     const T = [
@@ -533,7 +534,7 @@ document.addEventListener("visibilitychange", () => {
       pointAtTitle();
     }
     if (gone >= 30000){
-      find("long");
+      find("long"); job("long");
       log("Away " + words(gone) + ". Cobwebs formed.");
       $("faceWrap").classList.add("asleep");
       setTimeout(() => { $("faceWrap").classList.remove("asleep"); $("cobweb").classList.remove("on"); }, 3500);
@@ -571,7 +572,7 @@ document.addEventListener("mouseout", e => {
   if (e.relatedTarget || e.toElement || e.clientY > 2) return;
   if (Date.now() - lastTop < 5000) return;
   lastTop = Date.now(); attempt();
-  const first = find("top");
+  const first = find("top"); job("top");
   log("Cursor left out the top edge, toward the X.");
   $("app").classList.add("lookup"); $("faceWrap").classList.add("peek");
   setMood("panic", 3000); lookAt(e.clientX, -500); favicon("up");
@@ -605,7 +606,7 @@ document.addEventListener("keydown", e => {
     if ($("drawer").classList.contains("open")){ $("drawer").classList.remove("open"); return; }
     if ($("veil").classList.contains("on")){ find("esc"); $("dNo").click(); return; }
     if (now - (lastKey.esc||0) < 2500) return; lastKey.esc = now; attempt();
-    const first = find("esc"); log("Pressed Escape.");
+    const first = find("esc"); job("esc"); log("Pressed Escape.");
     keycap("Esc", "escaping", true); setMood("shock", 1500);
     const n = nth("esc");
     sayNow(esc(["Escape escaped.", "It left without you again.", "Escape has left 3 times. You haven't left once.", "Escape is having a better day than you.", "Escape sends its regards."], n), "You're still here, though.");
@@ -619,7 +620,7 @@ document.addEventListener("keyup", e => {
   if ((e.key === "Control" || e.key === "Meta") && modAlone){
     modAlone = false;
     if (now - (lastKey.mod||0) < 3000) return; lastKey.mod = now; attempt();
-    const first = find("mod"); log("Pressed " + MOD + ".");
+    const first = find("mod"); job("mod"); log("Pressed " + MOD + ".");
     keycap("W", "guarding W (symbolically)", false);
     if (!reduce){ document.body.animate([{transform:"translateX(0)"},{transform:"translateX(-8px)"},{transform:"translateX(8px)"},{transform:"translateX(0)"}], {duration:260}); }
     setMood("panic", 2200);
@@ -667,7 +668,7 @@ setInterval(() => {
   if (document.hidden || asleep || ended || gameOn) return;
   const idle = Date.now() - lastInput;
   if (idle > 8000 && idle <= 20000 && !stare){ lids(Math.min(0.85, (idle - 8000) / 12000)); if (idle > 12000 && !drowsySaid && Date.now() - lastSleepy > 120e3){ drowsySaid = true; lastSleepy = Date.now(); say("…getting… sleepy…", "You haven't moved in 12 seconds."); } }
-  if (idle > 20000){ asleep = true; sleepFrom = Date.now(); lids(1.05); $("faceWrap").classList.add("asleep"); say("z z z", "Nothing from you for 20 seconds. I fell asleep."); secret("sleep"); }
+  if (idle > 20000){ asleep = true; sleepFrom = Date.now(); lids(1.05); $("faceWrap").classList.add("asleep"); say("z z z", "Nothing from you for 20 seconds. I fell asleep."); secret("sleep"); job("nap"); }
 }, 1000);
 
 addEventListener("mousemove", e => { if (!document.body.classList.contains("elsewhere") && !$("faceWrap").classList.contains("peek")) lookAt(e.clientX, e.clientY); dodgeCheck(e.clientX, e.clientY); }, {passive:true});
@@ -993,7 +994,7 @@ addEventListener("mousemove", () => {
   const held = Date.now() - stare; stare = 0;
   if (held < 8000){ setMood("happy", 2000); sayNow("You moved!", "After " + secs(held) + ". I win."); log("Lost a staring contest after " + secs(held) + "."); }
 }, {passive:true});
-setInterval(() => { if (stare && Date.now() - stare >= 8000){ stare = 0; blink(); setMood("sulk", 2000); sayNow("Fine. You win.", "8 seconds without moving. I blinked."); log("Won a staring contest."); } }, 300);
+setInterval(() => { if (stare && Date.now() - stare >= 8000){ stare = 0; blink(); setMood("sulk", 2000); sayNow("Fine. You win.", "8 seconds without moving. I blinked."); log("Won a staring contest."); job("stare"); } }, 300);
 
 // ---------- the game in the tab title ----------
 const PRIZES = [{at:5, name:"sunglasses", el:"shades"}, {at:10, name:"a gold hat", el:"gold"}, {at:20, name:"a crown", el:"crown"}, {at:35, name:"a monocle", el:"monocle"}];
@@ -1026,7 +1027,7 @@ function gameStep(){
     } else if (G.obs.includes(G.x)) {
       G.score++; dayStat("best", G.score);
       if (G.score > G.best){ const before = G.best; G.best = G.score; store.set("best", G.best); const prize = PRIZES.find(p => before < p.at && G.best >= p.at); if (prize){ wearPrizes(); toast("TITLE GAME PRIZE: " + prize.name.toUpperCase()); } }
-      if (G.score >= goal && store.get("goalDay", "") !== today){ store.set("goalDay", today); earn(25, ""); toast("DAILY GOAL DONE: +25"); renderDaily(); }
+      job("run", G.score);
       if (G.score % 5 === 0){ earn(G.score - G.paid, ""); G.paid = G.score; if (G.speed > 130){ G.speed -= 20; clearInterval(G.tick); G.tick = setInterval(gameStep, G.speed); toast("FASTER"); } }
     }
   }
@@ -1105,6 +1106,7 @@ function renderShop(){
     });
   });
 }
+$("stareBtn").onclick = () => { if (stare) return; sayNow("Staring contest.", "Don't move your mouse for 8 seconds. Go."); stare = Date.now(); setMood("worried", 9000); lookAt(innerWidth/2, innerHeight/2); };
 $("shopBtn").onclick = () => { renderShop(); $("shop").classList.add("open"); };
 $("shopClose").onclick = () => $("shop").classList.remove("open");
 $("playBtn").onclick = () => { if (!gameOn) startGame(); pointAtTitle(); sayNow("Title game!", "It plays in my tab title. Space to jump. Every point is a coin. Every 5 points it gets faster."); };
@@ -1121,7 +1123,7 @@ function renderHud(){
 let coinMin = 0;
 setInterval(() => {
   if (document.hidden){ mood01 = Math.max(10, mood01 - 2/3600); }        // 2 points an hour, same as when I am closed, never below 10
-  else { mood01 = Math.min(100, mood01 + 0.25); coinMin += 1; if (coinMin >= 60){ coinMin = 0; earn(1, "a minute with me"); } } // +1 point every 4 seconds of company
+  else { mood01 = Math.min(100, mood01 + 0.25); coinMin += 1; if (coinMin >= 60){ coinMin = 0; earn(1, "a minute with me"); job("stay"); } } // +1 point every 4 seconds of company
   if (!forgot) store.set("mood", mood01);
   renderHud();
 }, 1000);
@@ -1130,9 +1132,41 @@ setInterval(() => {
 let today, goal;
 function setDay(){ today = new Date().toDateString(); const d = new Date(); goal = 4 + ((d.getFullYear() * 372 + d.getMonth() * 31 + d.getDate()) * 7 % 5); }
 setDay();
+// three daily jobs, picked fresh each calendar day
+const JOBS = [
+  {id:"poke", text:"Poke me {n} times", n:[5,8,12]},
+  {id:"leave", text:"Leave me {n} times (and come back)", n:[3,4,5]},
+  {id:"top", text:"Go for the X {n} times", n:[2,3]},
+  {id:"esc", text:"Press Escape {n} times", n:[3,5]},
+  {id:"mod", text:"Press " + MOD + " {n} times", n:[3,4]},
+  {id:"stare", text:"Win {n} staring contest", n:[1]},
+  {id:"nap", text:"Let me nap {n} time", n:[1]},
+  {id:"run", text:"Score {n}+ in one title-game run", n:[6,9,12]},
+  {id:"long", text:"Leave me alone 30s+, {n} times", n:[1,2]},
+  {id:"stay", text:"Spend {n} minutes with me", n:[3,5]}
+];
+function todaysJobs(){
+  const d = new Date(), seed0 = d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate();
+  let seed = seed0; const rand = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  const pool = JOBS.slice(), out = [];
+  while (out.length < 3){ const j = pool.splice(Math.floor(rand() * pool.length), 1)[0]; out.push({id:j.id, need:j.n[Math.floor(rand() * j.n.length)], text:j.text}); }
+  return out;
+}
+let jobs, jobProg;
+function loadJobs(){ jobs = todaysJobs(); const saved = store.get("jobs", null); jobProg = saved && saved.day === today ? saved.p : {}; }
+function job(id, v){
+  if (!jobs) return;
+  const j = jobs.find(j => j.id === id); if (!j) return;
+  const before = jobProg[id] || 0; if (before >= j.need) return;
+  jobProg[id] = id === "run" ? Math.max(before, v) : before + (v || 1);
+  if (!forgot) store.set("jobs", {day: today, p: jobProg});
+  if (jobProg[id] >= j.need){ earn(20, ""); toast("DAILY JOB DONE: +20"); if (jobs.every(j => (jobProg[j.id] || 0) >= j.need)) setTimeout(() => { earn(30, ""); toast("ALL 3 JOBS DONE: +30"); sayNow("All three jobs, done.", "+30 coins on top. New jobs tomorrow."); }, 2500); }
+  renderDaily();
+}
 function renderDaily(){
-  const done = store.get("goalDay", "") === today;
-  $("daily").textContent = done ? "Today's title-game goal (" + goal + "): done. New goal tomorrow." : "Today's title-game goal: score " + goal + " for 25 coins.";
+  if (!jobs) return;
+  const parts = jobs.map(j => { const p = Math.min(j.need, Math.floor(jobProg[j.id] || 0)); return (p >= j.need ? "✓ " : "☐ ") + j.text.replace("{n}", j.need) + " (" + p + "/" + j.need + ")"; });
+  $("daily").textContent = "Today's jobs, 20 coins each: " + parts.join("  ·  ");
 }
 // a small true report about the last day you visited
 let ds = store.get("dayStats", null);
@@ -1148,6 +1182,7 @@ function lastDayReport(){
   return when + ": " + bits.join(", ") + ".";
 }
 function runDaily(){
+  loadJobs();
   const last = store.get("bonusDay", "");
   const report = lastDayReport();
   if (report && last !== today) setTimeout(() => say("Daily report.", report), 6000);
@@ -1159,7 +1194,7 @@ function runDaily(){
     const bonus = firstEver ? 25 : Math.min(50, 10 * streakN);
     setTimeout(() => {
       earn(bonus, firstEver ? "first visit ever" : "daily visit, day " + streakN + " in a row");
-      if (firstEver){ toast("WELCOME: +25 COINS"); say("Here. 25 coins.", "Spend them in the Shop, on me. Come back tomorrow for more."); return; }
+      if (firstEver){ toast("WELCOME: +25 COINS"); say("Here. 25 coins.", "Spend them in the Shop, on me. There are 3 new jobs every day for more."); return; }
       toast(streakN > 1 ? "DAY " + streakN + " IN A ROW: +" + bonus + " COINS" : "FIRST VISIT TODAY: +" + bonus + " COINS");
       if (streakN > 1) say("Day " + streakN + " in a row.", "That's +" + bonus + " coins. " + (bonus < 50 ? "Come back tomorrow and it goes up, to a max of 50." : "That's the max. It stays at 50 a day while the streak lasts."));
       else say("+" + bonus + " coins for visiting today.", "Come back tomorrow for more. Two days in a row pays 20.");
@@ -1193,7 +1228,7 @@ function renderSecrets(){
 }
 function secret(id){ if (secrets.includes(id)) return false; secrets.push(id); if (!forgot) store.set("secrets", secrets); renderSecrets(); log("Secret found: " + SECRETS[id] + "."); return true; }
 $("face").addEventListener("click", () => {
-  const n = nth("poke"); secret("poke"); dayStat("pokes", 1); mood01 = Math.min(100, mood01 + 1);
+  const n = nth("poke"); secret("poke"); dayStat("pokes", 1); job("poke"); mood01 = Math.min(100, mood01 + 1);
   setMood(n > 6 ? "sulk" : "shock", 900); blink();
   const fw = $("faceWrap"); if (!reduce) fw.animate([{transform:"translateY(0)"},{transform:"translateY(-14px) rotate(-4deg)"},{transform:"translateY(0)"}], {duration:300});
   const fit = worn.includes("crown") ? "Careful. Royalty." : worn.includes("shades") ? "Can't see you. Too cool." : worn.includes("monocle") ? "Do mind the monocle." : worn.includes("stache") ? "Not the mustache." : null;
