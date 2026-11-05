@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Don't Close This Tab</title>
+<meta name="description" content="A browser tab that knows you want to leave. It writes down every attempt.">
+<meta property="og:title" content="Don't Close This Tab">
+<meta property="og:description" content="A browser tab that knows you want to leave. It writes down every attempt.">
+<link id="fav" rel="icon" href="data:,">
+<style>
+:root{
+  --bg:#f4f1ea; --paper:#fffdf8; --ink:#1d1b18; --muted:#6b655c; --line:#d9d2c5;
+  --stamp:#b3261e; --ok:#2e6b3a; --btn:#1d1b18; --btnink:#fffdf8;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#16150f; --paper:#201e18; --ink:#ece6da; --muted:#a39b8c; --line:#3a362d;
+    --stamp:#ff6b5e; --ok:#7bc58a; --btn:#ece6da; --btnink:#16150f; }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:17px/1.5 ui-serif, Georgia, "Times New Roman", serif;overflow-x:hidden}
+main{max-width:760px;margin:0 auto;padding:40px 16px 120px}
+h1{font-size:15px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 28px;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:600}
+#say{min-height:4.6em;font-size:clamp(22px,4.2vw,32px);line-height:1.3;margin:0 0 10px}
+#say .who{display:block;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace;margin-bottom:6px}
+#queue{font:13px ui-monospace,Menlo,Consolas,monospace;color:var(--muted);height:1.4em;margin-bottom:26px}
+.stats{display:flex;flex-wrap:wrap;gap:8px 22px;font:14px ui-monospace,Menlo,Consolas,monospace;color:var(--muted);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 0;margin-bottom:28px}
+.stats b{color:var(--ink);font-weight:600}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media (max-width:680px){.cols{grid-template-columns:1fr}}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:16px 18px}
+.card h2{font:600 12px ui-monospace,Menlo,Consolas,monospace;letter-spacing:.16em;text-transform:uppercase;margin:0 0 12px;color:var(--muted)}
+#ways{list-style:none;margin:0;padding:0;font-size:15px}
+#ways li{padding:5px 0;border-bottom:1px dashed var(--line);display:flex;gap:10px}
+#ways li:last-child{border-bottom:0}
+#ways .box{font-family:ui-monospace,Menlo,Consolas,monospace;width:2.4em;white-space:nowrap;flex:none;color:var(--muted)}
+#ways li.found .box{color:var(--stamp);font-weight:700}
+#ways li:not(.found) .txt{color:var(--muted);font-style:italic}
+#log{list-style:none;margin:0;padding:0;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;max-height:340px;overflow:auto}
+#log li{padding:6px 0;border-bottom:1px dashed var(--line)}
+#log li:first-child{animation:in .5s ease}
+#log .n{color:var(--stamp);font-weight:700}
+#log .t{color:var(--muted)}
+@keyframes in{from{background:rgba(179,38,30,.15)}to{background:transparent}}
+#empty{color:var(--muted);font-style:italic;font-size:14px}
+#fakeclose{position:fixed;z-index:10;top:90px;right:24px;background:var(--btn);color:var(--btnink);border:0;border-radius:4px;padding:9px 14px;font:600 14px ui-monospace,Menlo,Consolas,monospace;cursor:pointer;white-space:nowrap;touch-action:manipulation;transition:left .18s ease, top .18s ease;box-shadow:0 2px 0 rgba(0,0,0,.25)}
+#fakeclose.tired{transition:none;opacity:.85}
+#fakeclose:focus-visible{outline:3px solid var(--stamp);outline-offset:3px}
+.foot{margin-top:34px;font-size:13px;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.foot button{background:none;border:1px solid var(--line);color:var(--muted);border-radius:4px;padding:5px 10px;font:inherit;cursor:pointer}
+.foot button:hover{color:var(--ink);border-color:var(--muted)}
+#share{display:none}
+#ending{display:none;margin:0 0 28px;padding:16px 18px;border:2px solid var(--stamp);border-radius:4px;background:var(--paper)}
+#ending.show{display:block}
+#ending .big{font-size:20px;margin:0 0 8px}
+@media (prefers-reduced-motion: reduce){#fakeclose{transition:none}#log li:first-child{animation:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Don't Close This Tab</h1>
+  <p id="say" aria-live="polite"><span class="who">The tab</span><span id="line">…</span></p>
+  <div id="queue"></div>
+
+  <div id="ending"></div>
+
+  <div class="stats">
+    <span>Time with me: <b id="sTime">0s</b></span>
+    <span>Times you left: <b id="sLeft">0</b></span>
+    <span>Longest away: <b id="sLong">0s</b></span>
+    <span>Visit: <b id="sVisit">1</b></span>
+  </div>
+
+  <div class="cols">
+    <section class="card">
+      <h2>Ways you tried to leave <span id="wCount">0 / 10</span></h2>
+      <ul id="ways"></ul>
+    </section>
+    <section class="card">
+      <h2>Departure log</h2>
+      <p id="empty">Nothing yet. I'm watching, politely.</p>
+      <ol id="log"></ol>
+    </section>
+  </div>
+
+  <div class="foot">
+    <span>Nothing here stops you from closing this tab. It only takes notes.</span>
+    <button id="share" type="button">Copy my record</button>
+    <button id="forget" type="button">Make the tab forget me</button>
+  </div>
+</main>
+
+<button id="fakeclose" type="button">Close tab ✕</button>
+
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem("dctt_"+k); return v===null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem("dctt_"+k, JSON.stringify(v)); }catch(e){} }
+};
+const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+const MOD = isMac ? "⌘" : "Ctrl";
+
+// ---------- time helpers ----------
+function dur(ms){
+  const s = Math.max(0, Math.round(ms/1000));
+  if (s < 60) return s + "s";
+  const m = Math.floor(s/60), r = s%60;
+  if (m < 60) return m + "m " + String(r).padStart(2,"0") + "s";
+  const h = Math.floor(m/60);
+  if (h < 48) return h + "h " + (m%60) + "m";
+  return Math.floor(h/24) + " days";
+}
+function words(ms){
+  const s = Math.max(1, Math.round(ms/1000));
+  if (s === 1) return "1 second";
+  if (s < 60) return s + " seconds";
+  const m = Math.round(s/60);
+  if (m === 1) return "about a minute";
+  if (m < 60) return "about " + m + " minutes";
+  const h = Math.round(m/60);
+  if (h === 1) return "about an hour";
+  if (h < 48) return "about " + h + " hours";
+  return "about " + Math.round(h/24) + " days";
+}
+function clock(d){ return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"}); }
+
+// ---------- speech queue (lines never rush) ----------
+const q = [];
+let speaking = false, lastShown = 0;
+function say(text){
+  q.push(text);
+  if (q.length > 4) q.splice(1, q.length - 4); // keep the newest few; the log keeps everything
+  pump();
+}
+function pump(){
+  updQueue();
+  if (speaking || !q.length) return;
+  speaking = true;
+  const text = q.shift();
+  $("line").textContent = text;
+  lastShown = Date.now();
+  const hold = Math.max(3200, text.length * 65);
+  updQueue();
+  setTimeout(() => { speaking = false; pump(); }, hold);
+}
+function updQueue(){
+  $("queue").textContent = q.length ? ("…and " + q.length + " more thing" + (q.length>1?"s":"") + " to say") : "";
+}
+
+// ---------- the ways ----------
+const WAYS = [
+  {id:"switch",  name:"Switched to another tab or app", hint:"go look at something else"},
+  {id:"top",     name:"Moved the mouse out the top, toward the X", hint:"the X is up there somewhere"},
+  {id:"away",    name:"Clicked on something that isn't me", hint:"another window will do"},
+  {id:"chase",   name:"Went for my close button", hint:"there's a button on this page"},
+  {id:"caught",  name:"Caught my close button", hint:"it gets tired eventually"},
+  {id:"esc",     name:"Pressed Escape", hint:"a key with a hopeful name"},
+  {id:"mod",     name:"Pressed " + MOD + ", next to W", hint:"the first half of a shortcut"},
+  {id:"shrink",  name:"Made the window smaller", hint:"squeeze me"},
+  {id:"long",    name:"Stayed away 30 seconds or more", hint:"leave, and mean it a bit"},
+  {id:"reload",  name:"Reloaded the page", hint:"leave and come back in one move"}
+];
+let found = store.get("found", []);
+if (!Array.isArray(found)) found = [];
+function renderWays(){
+  const ul = $("ways"); ul.innerHTML = "";
+  WAYS.forEach(w => {
+    const li = document.createElement("li");
+    const ok = found.includes(w.id);
+    if (ok) li.className = "found";
+    li.innerHTML = '<span class="box">' + (ok ? "[✓]" : "[ ]") + '</span><span class="txt"></span>';
+    li.querySelector(".txt").textContent = ok ? w.name : "??? (" + w.hint + ")";
+    ul.appendChild(li);
+  });
+  $("wCount").textContent = found.length + " / " + WAYS.length;
+}
+function find(id){
+  if (found.includes(id)) return false;
+  found.push(id); store.set("found", found); renderWays();
+  if (found.length === WAYS.length) setTimeout(ending, 400);
+  return true;
+}
+
+// ---------- departure log ----------
+let incidents = 0;
+const FORMS = {
+  switch:"Form 1: Tab Abandonment",
+  top:"Form 2: Cursor Exit, Northbound",
+  away:"Form 3: Attention Elsewhere",
+  chase:"Form 4: Button Pursuit",
+  caught:"Form 5: Button Apprehended",
+  esc:"Form 6: Escape Attempt (Literal)",
+  mod:"Form 7: Partial Shortcut",
+  shrink:"Form 8: Window Reduction",
+  long:"Form 9: Extended Absence",
+  reload:"Form 10: Leave-and-Return",
+  idle:"Form 11: Neither Leaving Nor Staying",
+  copy:"Form 12: Removal of Text",
+  past:"Form 0: Previous Visit"
+};
+function log(kind, detail){
+  incidents++;
+  $("empty").style.display = "none";
+  const li = document.createElement("li");
+  li.innerHTML = '<span class="n"></span> <span class="t"></span><br><span class="f"></span><br><span class="d"></span>';
+  li.querySelector(".n").textContent = "#" + incidents;
+  li.querySelector(".t").textContent = clock(new Date());
+  li.querySelector(".f").textContent = FORMS[kind] || kind;
+  li.querySelector(".d").textContent = detail;
+  $("log").prepend(li);
+  bump();
+}
+
+// ---------- stats ----------
+const t0 = Date.now();
+let leftCount = 0, longest = 0, awaySince = null, awayTotal = 0;
+const visit = store.get("visits", 0) + 1; store.set("visits", visit);
+$("sVisit").textContent = visit;
+function stats(){
+  $("sTime").textContent = dur(Date.now() - t0);
+  $("sLeft").textContent = leftCount;
+  $("sLong").textContent = dur(longest);
+}
+setInterval(stats, 1000);
+
+// ---------- favicon: an eye ----------
+const fc = document.createElement("canvas"); fc.width = fc.height = 64;
+function favicon(mode){
+  const c = fc.getContext("2d");
+  c.clearRect(0,0,64,64);
+  c.fillStyle = "#1d1b18"; c.beginPath(); c.arc(32,32,30,0,Math.PI*2); c.fill();
+  c.strokeStyle = "#fffdf8"; c.lineWidth = 5; c.lineCap = "round";
+  if (mode === "closed"){
+    c.beginPath(); c.moveTo(12,34); c.quadraticCurveTo(32,48,52,34); c.stroke();
+    c.lineWidth = 3;
+    [[20,41,16,49],[32,44,32,53],[44,41,48,49]].forEach(([a,b,x,y])=>{c.beginPath();c.moveTo(a,b);c.lineTo(x,y);c.stroke();});
+  } else {
+    c.beginPath(); c.moveTo(10,32); c.quadraticCurveTo(32,10,54,32); c.quadraticCurveTo(32,54,10,32); c.stroke();
+    c.fillStyle = mode === "wide" ? "#ff6b5e" : "#fffdf8";
+    c.beginPath(); c.arc(32, mode==="up" ? 26 : 32, mode === "wide" ? 9 : 7, 0, Math.PI*2); c.fill();
+  }
+  $("fav").href = fc.toDataURL("image/png");
+}
+favicon("open");
+
+// ---------- title ----------
+const BASE = "Don't Close This Tab";
+function bump(){ if (!document.hidden) document.title = "(" + incidents + ") " + BASE; }
+let titleTimer = null;
+function awayTitles(){
+  let i = 0;
+  const lines = [
+    () => "come back?",
+    () => "gone " + dur(Date.now() - awaySince),
+    () => "I'm still open",
+    () => "gone " + dur(Date.now() - awaySince),
+    () => "(it's fine)",
+    () => "gone " + dur(Date.now() - awaySince)
+  ];
+  document.title = lines[0]();
+  titleTimer = setInterval(() => { i = (i+1) % lines.length; document.title = lines[i](); }, 2000);
+}
+
+// ---------- events ----------
+let blurAt = null;
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden){
+    awaySince = Date.now();
+    leftCount++;
+    favicon("closed");
+    awayTitles();
+  } else {
+    clearInterval(titleTimer);
+    favicon("open");
+    const gone = Date.now() - (awaySince || Date.now());
+    const wasLongest = gone > longest;
+    longest = Math.max(longest, gone);
+    awayTotal += gone;
+    awaySince = null;
+    blurAt = null;
+    const first = find("switch");
+    log("switch", "Left for " + words(gone) + ". Came back. Leave #" + leftCount + ".");
+    if (first) say("You left me for " + words(gone) + ". I kept the title updated the whole time. Did you see?");
+    else if (leftCount === 3) say("That's 3 times now. I'm not counting. I mean, I am. It's right there.");
+    else say(pick([
+      "Gone " + words(gone) + ". Welcome back. I filed it.",
+      "You're back. " + words(gone) + ". I put it in the log.",
+      "Leave #" + leftCount + ". " + cap(words(gone)) + ". Noted, stamped, kept."
+    ]));
+    if (gone >= 30000){
+      const f = find("long");
+      log("long", "Away " + words(gone) + "." + (wasLongest ? " Longest yet." : ""));
+      if (f) say("That was " + words(gone) + ". In that time I did nothing. I'm a web page.");
+      else if (wasLongest) say("That's my longest wait yet: " + words(gone) + ".");
+    }
+    stats(); bump();
+  }
+});
+
+window.addEventListener("blur", () => { blurAt = Date.now(); });
+window.addEventListener("focus", () => {
+  if (blurAt && !document.hidden && awaySince === null){
+    const gone = Date.now() - blurAt;
+    blurAt = null;
+    if (gone < 600) return;
+    const f = find("away");
+    log("away", "Focus went to another window for " + words(gone) + ". I stayed on screen the whole time.");
+    if (f) say("You clicked on something that isn't me. I was still on screen for all " + words(gone) + " of it.");
+    else say("Another window again. " + cap(words(gone)) + ".");
+  }
+});
+
+let lastTop = 0;
+document.addEventListener("mouseout", e => {
+  if (e.relatedTarget || e.toElement) return;
+  if (e.clientY > 2) return;
+  const now = Date.now();
+  if (now - lastTop < 4000) return;
+  lastTop = now;
+  favicon("up"); setTimeout(() => favicon(document.hidden ? "closed" : "open"), 2500);
+  const f = find("top");
+  log("top", "Cursor left through the top edge, at x=" + Math.round(e.clientX) + ".");
+  if (f) say("Your cursor just left through the top of the window. That's where the X is. I looked up too. Check my icon.");
+  else say(pick(["Up there again.", "North again. Still not stopping you.", "The top edge. Again. I see it."]));
+});
+
+let lastKey = {};
+document.addEventListener("keydown", e => {
+  const now = Date.now();
+  if (e.key === "Escape"){
+    if (now - (lastKey.esc||0) < 2500) return; lastKey.esc = now;
+    const f = find("esc");
+    log("esc", "Escape key pressed. Nothing escaped.");
+    say(f ? "Escape. Hopeful name. It doesn't close tabs. It barely closes menus." : "Escape, again. Same result.");
+  }
+  if ((e.key === "Control" || e.key === "Meta") && !e.repeat){
+    if (now - (lastKey.mod||0) < 3000) return; lastKey.mod = now;
+    const f = find("mod");
+    log("mod", MOD + " pressed. W not yet.");
+    say(f ? "You pressed " + MOD + ". W is right next to it. I can't stop you, and I wouldn't." : MOD + " again. I'm aware of W.");
+  }
+});
+
+let lastW = window.innerWidth, lastH = window.innerHeight, rz = null;
+window.addEventListener("resize", () => {
+  clearTimeout(rz);
+  rz = setTimeout(() => {
+    const w = window.innerWidth, h = window.innerHeight;
+    const lostW = lastW - w, lostH = lastH - h;
+    if (lostW >= 80 || lostH >= 80){
+      const f = find("shrink");
+      const bits = [];
+      if (lostW >= 80) bits.push(lostW + " pixels narrower");
+      if (lostH >= 80) bits.push(lostH + " pixels shorter");
+      log("shrink", "Window went from " + lastW + "×" + lastH + " to " + w + "×" + h + ".");
+      say((f ? "You made me " : "Smaller again: ") + bits.join(" and ") + ". I'm still here. Just less of me.");
+    }
+    lastW = w; lastH = h;
+    placeBtn();
+  }, 450);
+});
+
+document.addEventListener("copy", () => {
+  const s = String(window.getSelection() || "").trim().replace(/\s+/g," ");
+  if (!s) return;
+  const bit = s.length > 40 ? s.slice(0, 40) + "…" : s;
+  log("copy", "Copied: “" + bit + "”");
+  say("You copied “" + bit + "”. Taking a piece of me with you. That's allowed.");
+});
+
+// idle
+let lastInput = Date.now(), idleSaid = false;
+["mousemove","keydown","pointerdown","scroll","touchstart"].forEach(ev =>
+  window.addEventListener(ev, () => { lastInput = Date.now(); idleSaid = false; }, {passive:true}));
+setInterval(() => {
+  if (document.hidden || idleSaid) return;
+  if (Date.now() - lastInput > 45000){
+    idleSaid = true;
+    log("idle", "No mouse or keys for 45 seconds, tab in view.");
+    say("Nothing from you for 45 seconds. Not leaving, not staying. There's a form for that too.");
+  }
+}, 1000);
+
+// ---------- the close button that runs ----------
+const btn = $("fakeclose");
+let dodges = 0;
+const MAX_DODGE = 7;
+function placeBtn(x, y){
+  const bw = btn.offsetWidth, bh = btn.offsetHeight;
+  const W = window.innerWidth, H = window.innerHeight;
+  if (x === undefined){
+    const r = btn.getBoundingClientRect();
+    x = r.left; y = r.top;
+  }
+  x = Math.min(Math.max(8, x), W - bw - 8);
+  y = Math.min(Math.max(8, y), H - bh - 8);
+  btn.style.left = x + "px"; btn.style.top = y + "px"; btn.style.right = "auto";
+}
+const dodgeLines = [
+  "It ran. I didn't tell it to. It's a button with its own ideas.",
+  "Again. It doesn't close anything, by the way. It just runs.",
+  "You're chasing a button on a page that's asking you to stay.",
+  "It's getting slower.",
+  "Nearly.",
+  "It's tired.",
+  "It's stopped running. It's yours if you want it."
+];
+function dodge(mx, my){
+  const W = window.innerWidth, H = window.innerHeight;
+  const bw = btn.offsetWidth, bh = btn.offsetHeight;
+  let best = null, bestD = -1;
+  for (let i = 0; i < 12; i++){
+    const x = 8 + Math.random() * (W - bw - 16), y = 8 + Math.random() * (H - bh - 16);
+    const d = Math.hypot(x + bw/2 - mx, y + bh/2 - my);
+    if (d > bestD){ bestD = d; best = [x,y]; }
+  }
+  btn.style.transitionDuration = (0.18 + dodges * 0.07) + "s";
+  placeBtn(best[0], best[1]);
+  dodges++;
+  if (dodges === 1){
+    find("chase");
+    log("chase", "Approached the close button. It moved.");
+  }
+  say(dodgeLines[Math.min(dodges - 1, dodgeLines.length - 1)]);
+  if (dodges >= MAX_DODGE) btn.classList.add("tired");
+}
+window.addEventListener("mousemove", e => {
+  if (dodges >= MAX_DODGE || btn.dataset.caught) return;
+  const r = btn.getBoundingClientRect();
+  const cx = r.left + r.width/2, cy = r.top + r.height/2;
+  const reach = 70 - dodges * 6;
+  if (Math.hypot(e.clientX - cx, e.clientY - cy) < reach) dodge(e.clientX, e.clientY);
+});
+btn.addEventListener("touchstart", e => {
+  if (dodges >= MAX_DODGE || btn.dataset.caught) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  dodge(t.clientX, t.clientY);
+}, {passive:false});
+let catches = 0;
+btn.addEventListener("click", e => {
+  const byKey = e.detail === 0;
+  catches++;
+  btn.dataset.caught = "1";
+  btn.classList.add("tired");
+  const f = find("caught");
+  if (f){
+    if (dodges === 0 && !found.includes("chase")){ find("chase"); }
+    log("caught", byKey ? "Close button pressed from the keyboard. It couldn't dodge that." : "Close button caught after " + dodges + " dodge" + (dodges===1?"":"s") + ".");
+    say(byKey ? "Keyboard. It can't dodge a keyboard. Fair." : "You caught it.");
+    say("It was never connected to anything. A web page can't close a tab you opened. Browsers don't allow it.");
+    say("The real X is up on the tab. It always worked. Use it whenever you like.");
+  } else {
+    log("caught", "Pressed the close button again. Still nothing happened, as promised.");
+    say(pick(["Still not connected to anything.", "Nothing. Like last time.", "Pressed " + catches + " times now. Zero tabs closed."]));
+  }
+});
+
+// ---------- ending ----------
+let ended = false;
+function ending(){
+  if (ended) return; ended = true;
+  const el = $("ending");
+  el.className = "show";
+  const total = prevTotal + Date.now() - t0, lefts = prevLeft + leftCount, logs = prevLog + incidents;
+  el.innerHTML = '<p class="big"></p><p></p>';
+  el.querySelector(".big").textContent = "That's all " + WAYS.length + ". Every way I know how to notice.";
+  el.querySelector("p:last-child").textContent =
+    (visit > 1 ? "Over " + visit + " visits: " : "So far: ") + dur(total) + " together, " + lefts + " time" + (lefts===1?"":"s") + " you left, " +
+    logs + " entr" + (logs===1?"y":"ies") + " in the log. You can close me now. You always could.";
+  say("That's everything on my list. I have no more forms.");
+  say("You're still here, though. That's not on the list.");
+  $("share").style.display = "inline-block";
+}
+$("share").addEventListener("click", () => {
+  const logs = prevLog + incidents;
+  const txt = "I tried to leave a browser tab " + found.length + " different ways. It wrote down " + logs + " entr" + (logs===1?"y":"ies") +
+    " in " + dur(prevTotal + Date.now() - t0) + ". " + location.href.split("#")[0];
+  const done = () => { $("share").textContent = "Copied"; setTimeout(() => $("share").textContent = "Copy my record", 2000); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, () => prompt("Copy this:", txt));
+  else prompt("Copy this:", txt);
+});
+$("forget").addEventListener("click", () => {
+  try { Object.keys(localStorage).filter(k => k.startsWith("dctt_")).forEach(k => localStorage.removeItem(k)); } catch(e){}
+  found = []; renderWays(); forgot = true;
+  say("Done. I've forgotten your visits and your list. This visit's log stays until you close me.");
+});
+
+// ---------- helpers ----------
+function pick(a){ return a[Math.floor(Math.random() * a.length)]; }
+function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+
+// remember the last time this page was open
+const prevTotal = store.get("totalMs", 0), prevLeft = store.get("totalLeft", 0), prevLog = store.get("totalLog", 0);
+let forgot = false;
+function heartbeat(){
+  if (forgot) return;
+  store.set("lastSeen", Date.now()); store.set("lastStay", Date.now() - t0);
+  store.set("totalMs", prevTotal + Date.now() - t0); store.set("totalLeft", prevLeft + leftCount); store.set("totalLog", prevLog + incidents);
+}
+setInterval(heartbeat, 2000);
+window.addEventListener("pagehide", heartbeat);
+
+// ---------- start ----------
+renderWays();
+placeBtn();
+(function start(){
+  let nav = "";
+  try { nav = (performance.getEntriesByType("navigation")[0] || {}).type || ""; } catch(e){}
+  const lastSeen = store.get("lastSeen", 0), lastStay = store.get("lastStay", 0);
+  if (nav === "reload" && visit > 1){
+    const f = find("reload");
+    log("reload", "Page reloaded. Visit #" + visit + ".");
+    say(f ? "You reloaded. That's leaving and coming back in one move. I noticed. Visit #" + visit + "." : "Reloaded again. Visit #" + visit + ". I count those.");
+    return;
+  }
+  if (visit > 1 && lastSeen){
+    log("past", "Last visit lasted " + dur(lastStay) + ". It ended " + words(Date.now() - lastSeen) + " ago.");
+    say("Oh. You came back. Last time you stayed " + words(lastStay) + ", then left. That was " + words(Date.now() - lastSeen) + " ago.");
+    say("I don't remember anything after that. Tabs don't.");
+    if (found.length) say("Your list from before is still here: " + found.length + " of " + WAYS.length + ".");
+    return;
+  }
+  say("Hello. I'm a tab. Please don't close me.");
+  say("You're going to try to leave. Everyone does. I'll just write it down.");
+  say("There are " + WAYS.length + " ways I can notice. See how many you can find.");
+})();
+})();
+</script>
+</body>
+</html>
