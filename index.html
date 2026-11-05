@@ -122,7 +122,7 @@ header b{color:var(--ink);font-weight:600}
 @keyframes flyaway{35%{transform:scale(.25) translateY(-60vh)}50%{transform:scale(.25) translateY(-64vh) rotate(25deg)}100%{transform:none}}
 .walkoff{transition:transform 2.2s ease-in !important;transform:translateX(120vw) rotate(8deg) !important}
 #next{font-size:12px;color:var(--muted);text-align:center;margin-top:4px;min-height:1.2em}
-#toast{position:fixed;left:50%;top:14px;transform:translate(-50%,-140%);background:var(--red);color:#fff;font:700 13px ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:8px 14px;border-radius:6px;z-index:50;transition:transform .45s cubic-bezier(.2,1.6,.4,1)}
+#toast{position:fixed;left:50%;top:14px;transform:translate(-50%,-200%);background:var(--red);color:#fff;font:700 13px ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:8px 14px;border-radius:6px;z-index:50;transition:transform .45s cubic-bezier(.2,1.6,.4,1)}
 #toast.on{transform:translate(-50%,0)}
 #paint{position:fixed;inset:0;z-index:12;pointer-events:none;opacity:0;transition:opacity 1s}
 #paint.on{opacity:1}
@@ -144,9 +144,13 @@ header b{color:var(--ink);font-weight:600}
     </header>
 
     <div id="faceWrap" class="piece">
-      <svg id="face" viewBox="-160 -150 320 260" aria-hidden="true">
+      <svg id="face" viewBox="-160 -235 320 345" aria-hidden="true">
         <path class="tabshape piece" d="M-150,100 L-150,100 Q-128,100 -122,70 L-104,-110 Q-100,-140 -70,-140 L70,-140 Q100,-140 104,-110 L122,70 Q128,100 150,100 Z"/>
         <g id="bandages"></g>
+        <g id="shades" style="display:none"><rect x="-80" y="-62" width="66" height="34" rx="10" fill="#111"/><rect x="14" y="-62" width="66" height="34" rx="10" fill="#111"/><path d="M-14,-50 L14,-50" stroke="#111" stroke-width="6"/></g>
+        <g id="gold" style="display:none" transform="translate(40,-150) rotate(14)"><path d="M-34,8 L0,-70 L34,8 Z" fill="#f5c542" stroke="var(--tabline)" stroke-width="4" stroke-linejoin="round"/><circle cy="-72" r="9" fill="#fff" stroke="var(--tabline)" stroke-width="3"/></g>
+        <g id="crown" style="display:none" transform="translate(-40,-150) rotate(-10)"><path d="M-36,10 L-36,-30 L-18,-8 L0,-40 L18,-8 L36,-30 L36,10 Z" fill="#f5c542" stroke="var(--tabline)" stroke-width="4" stroke-linejoin="round"/></g>
+        <g id="monocle" style="display:none"><circle cx="45" cy="-45" r="36" fill="none" stroke="#f5c542" stroke-width="5"/><path d="M78,-35 Q95,10 80,60" fill="none" stroke="#f5c542" stroke-width="3"/></g>
         <g id="hat" style="display:none" transform="translate(40,-150) rotate(14)"><path d="M-34,8 L0,-70 L34,8 Z" fill="#c62a1f" stroke="var(--tabline)" stroke-width="4" stroke-linejoin="round"/><circle cy="-72" r="9" fill="#f5d04a" stroke="var(--tabline)" stroke-width="3"/><path d="M-22,-18 L22,-18 M-12,-42 L12,-42" stroke="#f5d04a" stroke-width="5"/></g>
         <g id="eyeL" transform="translate(-45,-45)">
           <circle class="eyeW" r="30"/><circle class="pupil" r="11"/>
@@ -207,7 +211,7 @@ header b{color:var(--ink);font-weight:600}
   <div class="stampword">YOU MAY LEAVE</div>
   <p id="certStats"></p>
   <p>You always could. The X on the tab is real.</p>
-  <button id="share" type="button">Copy my record</button>
+  <button id="share" type="button">Copy my record</button> <button id="keep" type="button">Keep playing</button>
 </div></div>
 
 <script>
@@ -250,7 +254,8 @@ function say(text, sub){
   while (q.length > 2) q.shift();
   pump();
 }
-function sayNow(text, sub){ // replace what's waiting; cut in only after the current line has had 1.6s
+function sayNow(text, sub){
+  if (window.__rpAt && Date.now() - window.__rpAt > 3000){ $("replay").classList.remove("on"); window.__rpAt = 0; } // replace what's waiting; cut in only after the current line has had 1.6s
   q.length = 0; q.push([text, sub||""]);
   if (!busy) return pump();
   const wait = Math.max(0, 2600 - (Date.now() - shownAt));
@@ -441,7 +446,8 @@ function rebuild(){
 let awaySince = null, hiddenTimer = null, blurAt = null;
 const seen = {};
 function nth(id){ seen[id] = (seen[id] || 0) + 1; return seen[id]; }
-function esc(lines, n){ return lines[Math.min(n, lines.length) - 1]; }
+const TAILS = ["Number {n}. I'm keeping count.", "That's {n} now.", "#{n}. Still here.", "{n} times. I've run out of new things to say about it.", "Time #{n}. I'm writing it down.", "{n}. My log is getting long."];
+function esc(lines, n){ return n <= lines.length ? lines[n - 1] : TAILS[(n - lines.length - 1) % TAILS.length].replace("{n}", n); }
 let saidWhileAway = [];
 document.addEventListener("visibilitychange", () => {
   if (document.hidden){
@@ -482,7 +488,7 @@ document.addEventListener("visibilitychange", () => {
       const lines = [...new Set(saidWhileAway)].slice(-6);
       $("replay").innerHTML = "While you were gone, my tab title said:<br>";
       const b = document.createElement("b"); b.textContent = lines.map(l => "“" + l + "”").join("  ·  "); $("replay").appendChild(b);
-      $("replay").classList.add("on"); clearTimeout(window.__rp); window.__rp = setTimeout(() => $("replay").classList.remove("on"), 9000);
+      $("replay").classList.add("on"); window.__rpAt = Date.now(); clearTimeout(window.__rp); window.__rp = setTimeout(() => $("replay").classList.remove("on"), 9000);
       pointAtTitle();
     }
     if (gone >= 30000){
@@ -762,42 +768,51 @@ $("dYes").onclick = () => {
 let closing = false;
 
 // ---------- finale ----------
-let ended = false;
+let ended = false, finaleDone = false;
 function finale(){
-  if (ended) return; ended = true;
-  const total = store.get("totalMs", 0) + Date.now() - t0, logs = store.get("totalLog", 0) + incidents;
+  if (finaleDone) return;
+  if (busy || q.length || $("veil").classList.contains("on") || document.hidden){ setTimeout(finale, 800); return; } // let the current line finish
+  finaleDone = true; ended = true;
+  const total = prevTotal + Date.now() - t0, logs = totalLog();
   sayNow("That's all ten.", "I've got nothing left.");
   setMood("shock", 3000);
   setTimeout(() => {
     if (!reduce){
-      const els = ["header", "#ways", "#secrets", "#bottom", "#sub", "#replay", "#fake"].map(s => document.querySelector(s));
-      document.querySelectorAll(".way").forEach(w => els.push(w));
+      const els = ["header", "#ways", "#secrets", "#next", "#bottom", "#sub", "#replay", "#fake"].map(s => document.querySelector(s));
       els.forEach((el, i) => { el.style.setProperty("--r", rnd(-50,50) + "deg"); el.style.animationDelay = (i * 0.07) + "s"; el.classList.add("fall"); });
-    } else { document.querySelectorAll("header,#ways,#bottom,#sub,#fake").forEach(el => el.style.opacity = 0); }
+    } else { document.querySelectorAll("header,#ways,#secrets,#next,#bottom,#sub,#fake").forEach(el => el.style.opacity = 0); }
     favicon("flag");
-    titleShow(["ok", "ok you win", "🏳 you may leave"], 1100, () => { setTitle("🏳 you may leave"); });
-  }, 2600);
+    titleShow(["ok", "ok you win", "🏳 you may leave"], 1800, () => setTitle("🏳 you may leave"));
+  }, 3400);
   setTimeout(() => {
-    $("certStats").textContent = (visit > 1 ? visit + " visits, " : "") + dur(total) + " together, " + logs + " entr" + (logs === 1 ? "y" : "ies") + " in the departure log.";
+    $("certStats").textContent = (visit > 1 ? "Over " + visit + " visits: " : "") + dur(total) + " with me, " + logs + " entr" + (logs === 1 ? "y" : "ies") + " in the departure log.";
     $("finale").classList.add("on");
     requestAnimationFrame(() => requestAnimationFrame(() => $("finale").classList.add("slam")));
     if (!reduce) document.body.animate([{transform:"translateY(0)"},{transform:"translateY(10px)"},{transform:"translateY(0)"}], {duration:200, delay:250});
     setMood("calmEnd", 99999);
-  }, 4400);
-  setTimeout(() => { sayNow("Fine. I'll leave first.", "Watch the tab title."); }, 9000);
+  }, 6000);
+  setTimeout(() => { $("finale").classList.remove("on", "slam"); sayNow("Fine. I'll leave first.", "Watch the tab title."); }, 13000);
   setTimeout(() => {
     const fw = $("faceWrap"); fw.style.transition = ""; if (!reduce) fw.classList.add("walkoff"); else fw.style.opacity = 0;
-    titleShow(["leaving in 3", "leaving in 2", "leaving in 1", "...", "I can't leave either", "I'm a tab"], 1400, () => {
+    titleShow(["leaving in 3", "leaving in 2", "leaving in 1", "...", "I can't leave either", "I'm a tab"], 1800, () => {
       fw.classList.remove("walkoff"); fw.style.opacity = "";
       setMood("sulk", 4000);
       sayNow("I'm back. I can't go anywhere.", "Only you can close me. You always could.");
-      setTitle("🏳 you may leave");
+      say("So. Encore?", "Everything still works. The surprises keep coming. Your title-game best is " + G.best + ".");
+      setTimeout(keepPlaying, 2500);
     });
-  }, 12500);
-  setTimeout(() => { if (!document.hidden) say("You're still here.", "That's not on the list."); }, 70000);
+  }, 16500);
 }
+function keepPlaying(){ // put the page back together and carry on
+  $("finale").classList.remove("on", "slam");
+  document.querySelectorAll(".fall").forEach(el => { el.classList.remove("fall"); el.style.animationDelay = ""; });
+  document.querySelectorAll("header,#ways,#secrets,#next,#bottom,#sub,#fake").forEach(el => el.style.opacity = "");
+  ended = false; moodLock = 0; settle(); favicon("open"); setTitle("(" + totalLog() + ") Don't Close This Tab");
+  $("honest").textContent = "All 10 found. Nothing here can stop you closing this tab.";
+}
+$("keep").onclick = keepPlaying;
 $("share").onclick = () => {
-  const logs = store.get("totalLog", 0) + incidents;
+  const logs = totalLog();
   const w = store.get("wrecks", 0);
   const txt = "I tried to leave a browser tab 10 different ways. It logged " + logs + " attempts" + (w ? " and fell apart " + (w === 1 ? "once" : w + " times") : "") + ". " + location.href.split("#")[0];
   const done = () => { $("share").textContent = "Copied"; setTimeout(() => $("share").textContent = "Copy my record", 2000); };
@@ -879,7 +894,7 @@ const STAGES = [
     improvAt = viewMs + 25e3;
   }}
 ];
-let stage = 0, improvAt = Infinity;
+let stage = 0, improvAt = Infinity, lastStageAt = 0;
 // already unlocked on an earlier visit: keep the hat, keep the game on a button
 while (stage < STAGES.length && viewMs >= STAGES[stage].at) stage++;
 if (stage >= 1) $("hat").style.display = "";
@@ -895,7 +910,7 @@ setInterval(() => {
   $("next").textContent = ended ? "" : nextText();
   if (viewMs > 90e3 && !renderSecrets.hinted){ renderSecrets.hinted = true; renderSecrets(); }
   if (busyNow() || ended) return;
-  if (stage < STAGES.length && viewMs >= STAGES[stage].at){ STAGES[stage].run(); stage++; return; }
+  if (stage < STAGES.length && viewMs >= STAGES[stage].at && Date.now() - lastStageAt > 25e3){ STAGES[stage].run(); stage++; lastStageAt = Date.now(); return; }
   if (viewMs >= improvAt){ improvise(); improvAt = viewMs + rnd(35e3, 50e3); }
 }, 500);
 
@@ -923,10 +938,18 @@ addEventListener("mousemove", () => {
 setInterval(() => { if (stare && Date.now() - stare >= 8000){ stare = 0; blink(); setMood("sulk", 2000); sayNow("Fine. You win.", "8 seconds without moving. I blinked."); log("Won a staring contest."); } }, 300);
 
 // ---------- the game in the tab title ----------
+const PRIZES = [{at:5, name:"sunglasses", el:"shades"}, {at:10, name:"a gold hat", el:"gold"}, {at:20, name:"a crown", el:"crown"}, {at:35, name:"a monocle", el:"monocle"}];
+function p_at(p){ return p.at + "+"; }
+function wearPrizes(){
+  const b = store.get("best", 0);
+  PRIZES.forEach(p => { const e = document.getElementById(p.el); if (e) e.style.display = b >= p.at ? "" : "none"; });
+  if (b >= 10) $("hat").style.display = "none";
+}
+function nextPrize(){ const b = store.get("best", 0); const p = PRIZES.find(p => b < p.at); return p ? " Next prize at " + p.at + ": " + p.name + "." : " You've won every prize."; }
 const G = {len:14, x:2, obs:[], jump:0, score:0, tick:null, best:store.get("best", 0), dead:false};
 function startGame(){
   gameOn = true; G.obs = []; G.jump = 0; G.score = 0; G.dead = false; G.waiting = true; $("gamebox").classList.add("on");
-  clearInterval(G.tick); G.tick = setInterval(gameStep, 230); gameStep();
+  clearInterval(G.tick); G.tick = setInterval(gameStep, 270); gameStep();
 }
 function stopGame(){ gameOn = false; clearInterval(G.tick); $("gamebox").classList.remove("on"); setTitle("(" + totalLog() + ") Don't Close This Tab"); }
 function gameStep(){
@@ -935,10 +958,12 @@ function gameStep(){
   if (!G.dead){
     G.obs = G.obs.map(o => o - 1).filter(o => o >= 0);
     const lastO = G.obs.length ? G.obs[G.obs.length - 1] : -99;
-    if (G.len - 1 - lastO > 3 && Math.random() < 0.33) G.obs.push(G.len - 1);
+    if (G.len - 1 - lastO > 4 && Math.random() < 0.3) G.obs.push(G.len - 1);
     if (G.jump > 0) G.jump--;
     if (G.obs.includes(G.x) && G.jump === 0){
-      G.dead = true; G.best = Math.max(G.best, G.score); store.set("best", G.best);
+      G.dead = true; const before = G.best; G.best = Math.max(G.best, G.score); store.set("best", G.best);
+      const prize = PRIZES.find(p => before < p.at && G.best >= p.at);
+      if (prize){ wearPrizes(); toast("TITLE GAME PRIZE: " + prize.name.toUpperCase()); setTimeout(() => sayNow("You won me " + prize.name + "!", "For scoring " + p_at(prize) + " in the title game. I'm wearing it."), 2700); }
       log("Title game: crashed with a score of " + G.score + ".");
       sayNow(G.score >= G.best && G.score > 0 ? "New best: " + G.score + "!" : "You crashed.", "Score " + G.score + ". Best " + G.best + ". Space to go again.");
     } else if (G.obs.includes(G.x)) { G.score++; }
@@ -946,13 +971,21 @@ function gameStep(){
   let row = "";
   for (let i = 0; i < G.len; i++) row += i === G.x ? (G.dead ? "✖" : G.jump ? "˚" : "●") : G.obs.includes(i) ? "▲" : "_";
   setTitle(G.dead ? "✖ crashed · " + G.score + " · space" : row + " " + G.score, true);
-  $("gameinfo").textContent = (G.dead ? "Crashed. " : "") + "Score " + G.score + " · best " + G.best + ". The game is up in the tab title.";
+  $("gameinfo").textContent = (G.dead ? "Crashed. " : "") + "Score " + G.score + " · best " + G.best + "." + nextPrize() + " The game is up in the tab title.";
 }
 function gameJump(){ if (gameOn && G.waiting){ G.waiting = false; return; } if (!gameOn || G.dead){ $("gJump").textContent = "Jump (Space)"; startGame(); pointAtTitle(); return; } if (G.jump === 0) G.jump = 3; }
 document.addEventListener("keydown", e => { if (gameOn && e.code === "Space"){ e.preventDefault(); gameJump(); } });
 $("gJump").onclick = gameJump;
 $("gStop").onclick = () => { stopGame(); sayNow("Game over. By choice.", "Your best was " + G.best + "."); };
 
+wearPrizes();
+// day streak: true count of calendar days in a row you've opened me
+(function streak(){
+  const day = new Date().toDateString(), last = store.get("lastDay", ""), y = new Date(Date.now() - 864e5).toDateString();
+  let n = store.get("streak", 0);
+  if (last !== day){ n = last === y ? n + 1 : 1; store.set("streak", n); store.set("lastDay", day); }
+  if (n > 1){ $("honest").textContent = "Day streak: " + n + " days in a row. Nothing here can stop you closing this tab."; }
+})();
 // ---------- start ----------
 // ---------- secrets ----------
 const SECRETS = {poke:"Poked me", menu:"Right-clicked", sleep:"Let me fall asleep", copy:"Copied my words", all:"Selected everything"};
