@@ -332,7 +332,7 @@ const WAYS = [
   {id:"mod",    name:"Pressed " + MOD, hint:"half of a shortcut"},
   {id:"shrink", name:"Squeezed me", hint:"make me smaller"},
   {id:"long",   name:"Left for 30s+", hint:"leave, and mean it"},
-  {id:"reload", name:"Reloaded me", hint:"leave and come back at once"}
+  {id:"reload", name:"Reloaded me", hint:"start me over, same tab"}
 ];
 let found = store.get("found", []); if (!Array.isArray(found)) found = [];
 function renderWays(fresh){
@@ -626,7 +626,7 @@ function wake(){
 let sleptAt = 0, sleepFrom = 0, drowsySaid = false, lastSleepy = -1e9;
 ["mousemove","keydown","pointerdown","touchstart","wheel"].forEach(ev => addEventListener(ev, () => { if (asleep) sleptAt = Date.now(); wake(); }, {passive:true}));
 setInterval(() => {
-  if (document.hidden || asleep || ended) return;
+  if (document.hidden || asleep || ended || gameOn) return;
   const idle = Date.now() - lastInput;
   if (idle > 8000 && idle <= 20000 && !stare){ lids(Math.min(0.85, (idle - 8000) / 12000)); if (idle > 12000 && !drowsySaid && Date.now() - lastSleepy > 120e3){ drowsySaid = true; lastSleepy = Date.now(); say("…getting… sleepy…", "You haven't moved in 12 seconds."); } }
   if (idle > 20000){ asleep = true; sleepFrom = Date.now(); lids(1.05); $("faceWrap").classList.add("asleep"); say("z z z", "Nothing from you for 20 seconds. I fell asleep."); secret("sleep"); }
