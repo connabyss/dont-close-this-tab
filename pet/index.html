@@ -1,0 +1,1213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Don't Close This Tab</title>
+<meta name="description" content="A browser tab that knows you want to leave. It does not take it well.">
+<meta property="og:title" content="Don't Close This Tab">
+<meta property="og:description" content="A browser tab that knows you want to leave. It does not take it well.">
+<link id="fav" rel="icon" href="data:,">
+<style>
+:root{
+  --bg:#f3efe6; --ink:#1d1b18; --muted:#6f685d; --line:#d8d0c2; --card:#fffdf8;
+  --tab:#fffdf8; --tabline:#1d1b18; --red:#c62a1f; --mood:0;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#15140f; --ink:#efe9dd; --muted:#a39b8c; --line:#3a362d; --card:#211f19; --tab:#2a2720; --tabline:#efe9dd; --red:#ff6b5e; }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:var(--bg);
+  background-image:radial-gradient(ellipse at 50% 35%, rgba(198,42,31,calc(var(--mood)*0.07)) 0%, transparent 70%);
+  color:var(--ink);font:17px/1.45 ui-serif,Georgia,"Times New Roman",serif;overflow:hidden;
+  transition:filter .6s ease, background-color .6s;
+}
+body.elsewhere{filter:grayscale(1) brightness(.85)}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+#app{position:relative;height:100%;display:flex;flex-direction:column;align-items:center;padding:18px 16px 12px;perspective:900px}
+#app.lookup .tilt{transform:rotateX(12deg) translateY(-8px)}
+.tilt{transition:transform .5s cubic-bezier(.3,1.4,.5,1);transform-origin:50% 0;display:flex;flex-direction:column;align-items:center;width:100%;flex:1;min-height:0}
+header{width:100%;max-width:820px;display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+header b{color:var(--ink);font-weight:600}
+.piece{transition:transform 1.1s cubic-bezier(.2,1.5,.4,1), opacity .6s}
+#faceWrap{position:relative;margin-top:1vh;width:min(330px,62vw,40vh);flex:none;transition:transform .45s cubic-bezier(.3,1.5,.5,1)}
+#faceWrap.peek{transform:translateY(-9vh) scale(.85)}
+#faceWrap.squish{animation:squish .7s ease}
+@keyframes squish{0%{transform:scaleX(1)}30%{transform:scaleX(.72) scaleY(1.12)}60%{transform:scaleX(1.08) scaleY(.95)}100%{transform:none}}
+#face{width:100%;height:auto;display:block;overflow:visible}
+#face .tabshape{fill:var(--tab);stroke:var(--tabline);stroke-width:5;stroke-linejoin:round}
+#face .eyeW{fill:#fff;stroke:var(--tabline);stroke-width:4}
+#face .pupil{fill:#1d1b18;transition:r .2s}
+#face .brow,#face .mouth{fill:none;stroke:var(--tabline);stroke-width:5;stroke-linecap:round;transition:d .25s}
+#face .lid{fill:var(--tab);stroke:var(--tabline);stroke-width:4;transition:transform .15s}
+#face .sweat{fill:#7cc4f2;opacity:0;transition:opacity .4s}
+#face .bandage{fill:#e9c9a0;stroke:#a8835a;stroke-width:2}
+#face .x{fill:none;stroke:var(--tabline);stroke-width:4;stroke-linecap:round}
+#zzz{position:absolute;right:-14%;top:30%;font:700 28px ui-monospace,Menlo,monospace;color:var(--muted);opacity:0;transition:opacity .5s}
+#faceWrap.asleep #zzz{opacity:1;animation:zz 2s ease-in-out infinite}
+@keyframes zz{50%{transform:translate(6px,-8px)}}
+#cobweb{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity 1.5s}
+#cobweb.on{opacity:.9}
+#bubble{margin-top:10px;max-width:720px;min-height:2.4em;text-align:center;font-size:clamp(22px,3.6vw,34px);line-height:1.2}
+#bubble.shake{animation:jit .14s linear infinite}
+@keyframes jit{25%{transform:translate(1px,-1px)}50%{transform:translate(-1px,1px)}75%{transform:translate(1px,1px)}}
+#sub{min-height:1.4em;font-size:14px;color:var(--muted);text-align:center;margin-top:4px}
+#ways{width:100%;max-width:820px;display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+@media (max-width:640px){#ways{grid-template-columns:repeat(2,1fr)}}
+.way{background:var(--card);border:1px dashed var(--line);border-radius:6px;padding:7px 40px 7px 9px;font-size:13px;line-height:1.25;color:var(--muted);font-style:italic;min-height:44px;position:relative}
+.way.found{border:1.5px solid var(--red);color:var(--ink);font-style:normal}
+.way.found::after{content:"LEFT";position:absolute;right:6px;top:4px;font:700 9px ui-monospace,monospace;letter-spacing:.12em;color:var(--red);border:1.5px solid var(--red);padding:0 3px;transform:rotate(8deg)}
+.way.stamp{animation:stamp .5s cubic-bezier(.2,2,.4,1)}
+@keyframes stamp{0%{transform:scale(1.6) rotate(-6deg);opacity:0}100%{transform:none;opacity:1}}
+#bottom{width:100%;max-width:820px;display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;font-size:12px;color:var(--muted)}
+#bottom button{background:none;border:1px solid var(--line);color:var(--muted);border-radius:4px;padding:4px 9px;font:inherit;cursor:pointer}
+#bottom button:hover{color:var(--ink);border-color:var(--muted)}
+#drawer{position:fixed;right:0;top:0;bottom:0;width:min(380px,92vw);background:var(--card);border-left:1px solid var(--line);transform:translateX(105%);transition:transform .3s;z-index:30;padding:16px;overflow:auto;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace}
+#drawer.open{transform:none}
+#drawer h2{font-size:12px;letter-spacing:.16em;text-transform:uppercase;margin:0 0 10px;color:var(--muted)}
+#log{list-style:none;margin:0;padding:0}
+#log li{padding:6px 0;border-bottom:1px dashed var(--line)}
+#log .n{color:var(--red);font-weight:700}
+#fake{position:fixed;z-index:20;top:70px;right:22px;background:var(--ink);color:var(--bg);border:0;border-radius:5px;padding:9px 14px;font:600 14px ui-monospace,Menlo,Consolas,monospace;cursor:pointer;white-space:nowrap;touch-action:manipulation;transition:left .22s cubic-bezier(.3,1.4,.5,1),top .22s cubic-bezier(.3,1.4,.5,1),transform .3s}
+#fake.tiny{transform:scale(.35)}
+#fake.tired{transform:rotate(-14deg);transition:none}
+#fake.decoy{opacity:.92}
+#fake:focus-visible,.dlg button:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+.key{position:fixed;z-index:15;width:110px;height:110px;border-radius:14px;background:var(--card);border:3px solid var(--ink);box-shadow:0 8px 0 var(--ink);display:flex;align-items:center;justify-content:center;font:700 54px ui-monospace,Menlo,monospace;pointer-events:none}
+.key small{position:absolute;bottom:-34px;left:50%;transform:translateX(-50%);font:600 12px ui-monospace,monospace;white-space:nowrap;color:var(--muted)}
+.key.pop{animation:pop .35s cubic-bezier(.2,2,.4,1)}
+@keyframes pop{from{transform:scale(0)}}
+.key.run{transition:transform 1.4s cubic-bezier(.6,0,.9,.5);transform:translateX(-120vw) rotate(-25deg) !important}
+#veil{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;display:none;align-items:center;justify-content:center;padding:16px}
+#veil.on{display:flex}
+.dlg{background:var(--card);border:2px solid var(--ink);border-radius:8px;max-width:440px;width:100%;padding:20px 20px 16px;box-shadow:0 12px 0 rgba(0,0,0,.35);transition:transform .3s}
+.dlg .q{font-size:22px;margin:0 0 6px}
+.dlg .d{font-size:14px;color:var(--muted);margin:0 0 16px}
+.dlg .d:empty{display:none}
+.dlg .q{margin-bottom:16px !important}
+.dlg .row{display:flex;gap:10px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.dlg button{font:600 15px ui-monospace,Menlo,monospace;border-radius:5px;padding:9px 16px;cursor:pointer;border:2px solid var(--ink);transition:font-size .3s,padding .3s}
+.dlg .yes{background:var(--card);color:var(--ink)}
+.dlg .no{background:var(--ink);color:var(--card)}
+.dlg.crack{animation:crack .6s ease forwards}
+@keyframes crack{30%{transform:rotate(-3deg) scale(1.03)}100%{transform:translateY(120vh) rotate(18deg)}}
+#finale{position:fixed;inset:0;z-index:35;display:none;align-items:center;justify-content:center;pointer-events:none}
+#finale.on{display:flex}
+#cert{pointer-events:auto;background:var(--card);border:3px double var(--red);padding:24px 26px;max-width:520px;margin:16px;text-align:center;transform:scale(3) rotate(-8deg);opacity:0;transition:transform .35s cubic-bezier(.2,1.6,.4,1),opacity .2s}
+#finale.slam #cert{transform:rotate(-2deg);opacity:1}
+#cert .stampword{font:800 clamp(30px,6vw,46px)/1 ui-monospace,Menlo,monospace;color:var(--red);letter-spacing:.06em;border:4px solid var(--red);display:inline-block;padding:6px 12px;margin-bottom:14px}
+#cert p{margin:6px 0}
+#cert button{margin-top:12px;font:600 14px ui-monospace,monospace;padding:8px 14px;border-radius:5px;border:2px solid var(--ink);background:var(--ink);color:var(--card);cursor:pointer}
+.fall{animation:fall 1.4s cubic-bezier(.5,0,.9,.6) forwards}
+@keyframes fall{to{transform:translateY(130vh) rotate(var(--r,20deg));opacity:.6}}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.01s !important;transition-duration:.01s !important}
+  #bubble.shake{animation:none}
+}
+#tabmirror{display:inline-flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;padding:5px 12px 6px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink);max-width:min(420px,55vw);position:relative}
+#tabmirror img{width:16px;height:16px;flex:none}
+#tabmirror span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tabmirror.flash{animation:flash .6s ease 2}
+@keyframes flash{50%{background:var(--red);color:#fff}}
+#tabhint{position:absolute;left:100%;top:4px;margin-left:10px;white-space:nowrap;color:var(--red);font-size:12px;opacity:0;transition:opacity .4s}
+#tabhint.on{opacity:1}
+#replay{max-width:560px;margin:10px auto 0;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;color:var(--muted);text-align:center;opacity:0;transition:opacity .6s;min-height:0}
+#replay.on{opacity:1}
+#replay b{color:var(--ink);font-weight:600}
+#secrets{font-size:12px;color:var(--muted);text-align:center;margin-top:6px}
+#face{cursor:pointer}
+.flyaway{animation:flyaway 1.6s cubic-bezier(.5,0,.5,1) forwards}
+@keyframes flyaway{35%{transform:scale(.25) translateY(-60vh)}50%{transform:scale(.25) translateY(-64vh) rotate(25deg)}100%{transform:none}}
+.walkoff{transition:transform 2.2s ease-in !important;transform:translateX(120vw) rotate(8deg) !important}
+#next{font-size:12px;color:var(--muted);text-align:center;margin-top:4px;min-height:1.2em}
+#toast{position:fixed;left:50%;top:14px;transform:translate(-50%,-200%);background:var(--red);color:#fff;font:700 13px ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:8px 14px;border-radius:6px;z-index:50;transition:transform .45s cubic-bezier(.2,1.6,.4,1)}
+#toast.on{transform:translate(-50%,0)}
+#paint{position:fixed;inset:0;z-index:12;pointer-events:none;opacity:0;transition:opacity 1s}
+#paint.on{opacity:1}
+#frame{position:fixed;z-index:13;pointer-events:none;border:10px solid #8a5a2b;box-shadow:inset 0 0 0 3px #d9a85f,0 10px 30px rgba(0,0,0,.5);display:none}
+#frame.on{display:block}
+#frame .plaque{position:absolute;left:50%;bottom:-38px;transform:translateX(-50%);background:#d9a85f;color:#2a1d0e;font:600 12px ui-monospace,monospace;padding:3px 10px;white-space:nowrap;border-radius:2px}
+#gamerow{font:700 clamp(18px,3vw,26px) ui-monospace,Menlo,monospace;color:var(--ink);letter-spacing:.12em;display:block;margin-bottom:2px}
+#gamebox{display:none;text-align:center;margin-top:8px;font:13px ui-monospace,Menlo,monospace;color:var(--muted)}
+#gamebox.on{display:block}
+#gamebox button{font:600 13px ui-monospace,monospace;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:5px;padding:5px 10px;cursor:pointer;margin:0 4px}
+.wave{animation:wave .9s ease}
+@keyframes wave{40%{transform:translateY(-26px) rotate(-6deg)}}
+#app.tight #faceWrap{width:min(330px,62vw,26vh)}
+#app.tight #bubble{font-size:clamp(20px,3vw,28px)}
+#hud{position:relative;margin:auto auto 8px;z-index:2;display:flex;justify-content:center;gap:10px;align-items:center;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:13px;max-width:calc(100vw - 24px)}
+#hud b{color:var(--ink)}
+#hud button{font:600 12px ui-monospace,monospace;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;padding:4px 9px;cursor:pointer}
+.moodbar{display:inline-block;width:70px;height:9px;border:1px solid var(--muted);border-radius:5px;overflow:hidden}
+.moodbar i{display:block;height:100%;width:50%;background:var(--red);transition:width .6s}
+#coinpop{position:fixed;z-index:60;font:800 20px ui-monospace,monospace;color:#f5c542;pointer-events:none;transition:transform 1.2s ease-out,opacity 1.2s;text-shadow:0 2px 0 #000}
+#shop{position:fixed;left:0;top:0;bottom:0;width:min(400px,94vw);background:var(--card);border-right:1px solid var(--line);transform:translateX(-105%);transition:transform .3s;z-index:31;padding:16px;overflow:auto;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace}
+#shop.open{transform:none}
+#shop h2{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px}
+.item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.item button{font:600 12px ui-monospace,monospace;border:1px solid var(--ink);background:var(--ink);color:var(--card);border-radius:5px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+.item button.owned{background:var(--card);color:var(--ink)}
+.item button:disabled{opacity:.4;cursor:default}
+.item small{display:block;color:var(--muted)}
+#daily{font-size:12px;color:var(--muted);text-align:center;margin-top:4px}
+body.room-attic{--bg:#15140f;--ink:#efe9dd;--muted:#a39b8c;--line:#3a362d;--card:#211f19;--tab:#2a2720;--tabline:#efe9dd;background-color:#2a2116}
+body.room-beach{--ink:#1d1b18;--muted:#5d5548;--line:#c9bfa9;--card:#fffaf0;--tab:#fffdf8;--tabline:#1d1b18;background-color:#f2dfb0;--bg:#f2dfb0}
+body.room-space{--bg:#15140f;--ink:#efe9dd;--muted:#a39b8c;--line:#3a362d;--card:#211f19;--tab:#2a2720;--tabline:#efe9dd;background-color:#07081a;background-image:radial-gradient(1px 1px at 20% 30%,#fff,transparent),radial-gradient(1px 1px at 70% 20%,#fff,transparent),radial-gradient(2px 2px at 40% 70%,#fff,transparent),radial-gradient(1px 1px at 85% 60%,#fff,transparent),radial-gradient(1px 1px at 10% 85%,#fff,transparent),radial-gradient(1.5px 1.5px at 55% 45%,#fff,transparent)}
+body.room-office{--ink:#1d1b18;--muted:#5d5548;--line:#c9bfa9;--card:#fffaf0;--tab:#fffdf8;--tabline:#1d1b18;background-color:#d9dde2;--bg:#d9dde2}
+#roomdeco{position:fixed;inset:0;pointer-events:none;z-index:0;font-size:46px}
+#roomdeco span{position:absolute;opacity:.85}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="tilt">
+    <header class="mono piece">
+      <span id="tabmirror"><img id="mirrorIcon" alt=""><span id="mirrorText">Don't Close This Tab</span><em id="tabhint">← your real tab title says this too ↑</em></span>
+    </header>
+
+    <div id="faceWrap" class="piece">
+      <svg id="face" viewBox="-160 -235 320 345" aria-hidden="true">
+        <path class="tabshape piece" d="M-150,100 L-150,100 Q-128,100 -122,70 L-104,-110 Q-100,-140 -70,-140 L70,-140 Q100,-140 104,-110 L122,70 Q128,100 150,100 Z"/>
+        <g id="bandages"></g>
+        <g id="shades" style="display:none"><rect x="-80" y="-62" width="66" height="34" rx="10" fill="#111"/><rect x="14" y="-62" width="66" height="34" rx="10" fill="#111"/><path d="M-14,-50 L14,-50" stroke="#111" stroke-width="6"/></g>
+        <g id="gold" style="display:none" transform="translate(40,-150) rotate(14)"><path d="M-34,8 L0,-70 L34,8 Z" fill="#f5c542" stroke="var(--tabline)" stroke-width="4" stroke-linejoin="round"/><circle cy="-72" r="9" fill="#fff" stroke="var(--tabline)" stroke-width="3"/></g>
+        <g id="crown" style="display:none" transform="translate(-40,-150) rotate(-10)"><path d="M-36,10 L-36,-30 L-18,-8 L0,-40 L18,-8 L36,-30 L36,10 Z" fill="#f5c542" stroke="var(--tabline)" stroke-width="4" stroke-linejoin="round"/></g>
+        <g id="monocle" style="display:none"><circle cx="45" cy="-45" r="36" fill="none" stroke="#f5c542" stroke-width="5"/><path d="M78,-35 Q95,10 80,60" fill="none" stroke="#f5c542" stroke-width="3"/></g>
+        <g id="bowtie" style="display:none" transform="translate(0,82)"><path d="M0,0 L-30,-16 L-30,16 Z M0,0 L30,-16 L30,16 Z" fill="#c62a1f" stroke="var(--tabline)" stroke-width="3" stroke-linejoin="round"/><circle r="7" fill="#c62a1f" stroke="var(--tabline)" stroke-width="3"/></g>
+        <g id="stache" style="display:none" transform="translate(0,14)"><path d="M0,0 Q-20,-14 -40,4 Q-26,-2 -14,8 Q-6,10 0,4 Q6,10 14,8 Q26,-2 40,4 Q20,-14 0,0 Z" fill="var(--tabline)"/></g>
+        <g id="hat" style="display:none" transform="translate(40,-150) rotate(14)"><path d="M-34,8 L0,-70 L34,8 Z" fill="#c62a1f" stroke="var(--tabline)" stroke-width="4" stroke-linejoin="round"/><circle cy="-72" r="9" fill="#f5d04a" stroke="var(--tabline)" stroke-width="3"/><path d="M-22,-18 L22,-18 M-12,-42 L12,-42" stroke="#f5d04a" stroke-width="5"/></g>
+        <g id="eyeL" transform="translate(-45,-45)">
+          <circle class="eyeW" r="30"/><circle class="pupil" r="11"/>
+          <path class="lid" d="M-32,0 A32,32 0 0 1 32,0 Z" transform="scale(1,0)"/>
+        </g>
+        <g id="eyeR" transform="translate(45,-45)">
+          <circle class="eyeW" r="30"/><circle class="pupil" r="11"/>
+          <path class="lid" d="M-32,0 A32,32 0 0 1 32,0 Z" transform="scale(1,0)"/>
+        </g>
+        <path id="browL" class="brow" d="M-70,-92 L-22,-92"/>
+        <path id="browR" class="brow" d="M22,-92 L70,-92"/>
+        <path id="mouth" class="mouth" d="M-30,30 Q0,48 30,30"/>
+        <path class="sweat" id="sw1" d="M95,-80 q-8,14 0,18 q8,-4 0,-18z"/>
+        <path class="sweat" id="sw2" d="M-98,-60 q-8,14 0,18 q8,-4 0,-18z"/>
+        <path class="sweat" id="sw3" d="M100,-20 q-8,14 0,18 q8,-4 0,-18z"/>
+      </svg>
+      <div id="zzz">z z</div>
+    </div>
+
+    <div id="bubble" class="piece" aria-live="polite">…</div>
+    <div id="sub" class="mono piece"></div>
+    <div id="replay" aria-live="polite"></div>
+    <div id="gamebox"><span id="gamerow"></span><span id="gameinfo"></span><br><button id="gJump" type="button">Jump (Space)</button><button id="gStop" type="button">Stop the game</button></div>
+
+    <div id="hud" class="mono">
+      <span title="Coins">🪙 <b id="coins">0</b></span>
+      <span title="Days in a row">🔥 <b id="streakN">1</b> day</span>
+      <span class="moodbar" title="Mood: how much attention I've had lately"><i id="moodFill"></i></span><b id="moodPct">50%</b>
+      <button id="shopBtn" type="button">Shop</button>
+      <button id="playBtn" type="button">Title game</button>
+    </div>
+    <div id="ways" class="piece"></div>
+    <div id="secrets" class="mono piece"></div>
+    <div id="next" class="mono piece"></div>
+    <div id="daily" class="mono piece"></div>
+    <div id="bottom" class="mono piece">
+      <span><span>with me <b id="sTime">0s</b> · left <b id="sLeft">0</b> · visit <b id="sVisit">1</b></span><br><span id="honest">Nothing here can stop you closing this tab.</span></span>
+      <span><button id="logBtn" type="button">Departure log (0)</button> <button id="forget" type="button">Forget me</button></span>
+    </div>
+  </div>
+</div>
+
+<svg id="cobweb" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+  <g fill="none" stroke="#999" stroke-width=".25">
+    <path d="M0,0 L22,0 M0,0 L0,22 M0,0 L18,12 M0,0 L10,20 M4,0 Q4,4 0,4 M9,0 Q8,8 0,9 M15,0 Q13,13 0,15"/>
+    <path d="M100,0 L78,0 M100,0 L100,22 M100,0 L82,12 M100,0 L90,20 M96,0 Q96,4 100,4 M91,0 Q92,8 100,9 M85,0 Q87,13 100,15"/>
+  </g>
+</svg>
+
+<button id="fake" type="button">Close tab ✕</button>
+<div id="toast"></div>
+<canvas id="paint"></canvas>
+<div id="frame"><div class="plaque"></div></div>
+
+<aside id="shop" aria-label="Shop">
+  <h2 style="margin-top:0">Shop · 🪙 <span id="shopCoins">0</span> <button id="shopClose" type="button" style="float:right">close</button></h2>
+  <div style="color:var(--muted)">Coins come from visiting, finding leaving tricks, and the title game. Things you buy are kept in this browser only.</div>
+  <h2>Outfits</h2><div id="shopOutfits"></div>
+  <h2>Rooms</h2><div id="shopRooms"></div>
+</aside>
+<div id="roomdeco" aria-hidden="true"></div>
+<aside id="drawer" aria-label="Departure log">
+  <h2>Departure log <button id="logClose" type="button" style="float:right">close</button></h2>
+  <ol id="log"></ol>
+</aside>
+
+<div id="veil"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dq">
+  <p class="q" id="dq"></p><p class="d" id="dd"></p>
+  <div class="row"><button class="yes" id="dYes" type="button"></button><button class="no" id="dNo" type="button"></button></div>
+</div></div>
+
+<div id="finale"><div id="cert">
+  <div class="stampword">YOU MAY LEAVE</div>
+  <p id="certStats"></p>
+  <p>You always could. The X on the tab is real.</p>
+  <button id="share" type="button">Copy my record</button> <button id="keep" type="button">Keep playing</button>
+</div></div>
+
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const store = {
+  get(k,d){ try{ const v = localStorage.getItem("dcttpet_"+k); return v===null?d:JSON.parse(v); }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem("dcttpet_"+k, JSON.stringify(v)); }catch(e){} }
+};
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+const MOD = isMac ? "⌘" : "Ctrl";
+const rnd = (a,b) => a + Math.random()*(b-a);
+const pick = a => a[Math.floor(Math.random()*a.length)];
+
+function dur(ms){
+  const s = Math.max(0, Math.round(ms/1000));
+  if (s < 60) return s + "s";
+  const m = Math.floor(s/60);
+  if (m < 60) return m + "m " + String(s%60).padStart(2,"0") + "s";
+  const h = Math.floor(m/60);
+  if (h < 48) return h + "h " + (m%60) + "m";
+  return Math.floor(h/24) + " days";
+}
+function secs(ms){ if (ms < 950) return "under a second"; const s = Math.max(1, Math.round(ms/1000)); return s + (s===1?" second":" seconds"); }
+function words(ms){
+  if (ms < 950) return "under a second";
+  const s = Math.max(1, Math.round(ms/1000));
+  if (s < 90) return secs(ms);
+  const m = Math.round(s/60); if (m < 90) return m + " minutes";
+  const h = Math.round(m/60); if (h < 48) return h + " hours";
+  return Math.round(h/24) + " days";
+}
+
+// ---------- speech: short lines, never rushed ----------
+const q = []; let busy = false;
+function say(text, sub){
+  q.push([text, sub||""]);
+  while (q.length > 2) q.shift();
+  pump();
+}
+function sayNow(text, sub){
+  if (window.__rpAt && Date.now() - window.__rpAt > 3000){ $("replay").classList.remove("on"); window.__rpAt = 0; } // replace what's waiting; cut in only after the current line has had 1.6s
+  q.length = 0; q.push([text, sub||""]);
+  if (!busy) return pump();
+  const wait = Math.max(0, 2600 - (Date.now() - shownAt));
+  clearTimeout(holdTimer);
+  holdTimer = setTimeout(() => { busy = false; pump(); }, wait);
+}
+let holdTimer = null, shownAt = 0;
+function pump(){
+  if (busy || !q.length) return;
+  busy = true;
+  const [t, s] = q.shift();
+  $("bubble").textContent = t; $("sub").textContent = s;
+  shownAt = Date.now();
+  const hold = Math.max(2600, (t.length + s.length) * 62);
+  holdTimer = setTimeout(() => { busy = false; pump(); }, hold);
+}
+
+// ---------- face ----------
+const MOODS = {
+  calm:   {brow:[-92,-92], mouth:"M-30,30 Q0,48 30,30", pupil:11, sweat:0},
+  happy:  {brow:[-98,-98], mouth:"M-36,24 Q0,62 36,24", pupil:12, sweat:0},
+  worried:{brow:[-84,-98], mouth:"M-28,38 Q0,30 28,38", pupil:10, sweat:1},
+  nervous:{brow:[-80,-100],mouth:"M-30,34 Q-15,24 0,34 Q15,44 30,34", pupil:8, sweat:2},
+  panic:  {brow:[-76,-104],mouth:"M-20,34 Q0,4 20,34 Q0,62 -20,34", pupil:6, sweat:3},
+  shock:  {brow:[-110,-110],mouth:"M-14,34 Q0,12 14,34 Q0,56 -14,34", pupil:5, sweat:1},
+  sulk:   {brow:[-96,-86], mouth:"M-26,40 Q0,28 26,40", pupil:11, sweat:0},
+  calmEnd:{brow:[-92,-92], mouth:"M-30,30 Q0,44 30,30", pupil:11, sweat:0}
+};
+let mood = "calm", moodLock = 0;
+function setMood(m, lockMs){
+  if (Date.now() < moodLock && !lockMs) return;
+  mood = m; const M = MOODS[m];
+  $("browL").setAttribute("d", `M-70,${M.brow[1]} L-22,${M.brow[0]}`);
+  $("browR").setAttribute("d", `M22,${M.brow[0]} L70,${M.brow[1]}`);
+  $("mouth").setAttribute("d", M.mouth);
+  document.querySelectorAll("#face .pupil").forEach(p => p.setAttribute("r", M.pupil));
+  ["sw1","sw2","sw3"].forEach((id,i) => $(id).style.opacity = i < M.sweat ? 1 : 0);
+  if (lockMs) moodLock = Date.now() + lockMs;
+}
+function baseMood(){ // escalates with how many times you've tried to leave this visit
+  if (ended) return "calmEnd";
+  const n = attempts;
+  return n < 3 ? "calm" : n < 6 ? "worried" : n < 10 ? "nervous" : "panic";
+}
+function settle(){ setMood(baseMood()); document.documentElement.style.setProperty("--mood", Math.min(5, attempts/3)); $("bubble").classList.toggle("shake", !reduce && attempts >= 10 && !ended); }
+setInterval(() => { if (Date.now() >= moodLock) settle(); }, 500);
+
+let look = {x:0, y:0};
+function lookAt(x, y){ look = {x, y}; drawEyes(); }
+function drawEyes(){
+  const r = $("face").getBoundingClientRect();
+  ["eyeL","eyeR"].forEach((id, i) => {
+    const ex = r.left + r.width * (i ? 0.64 : 0.36), ey = r.top + r.height * 0.4;
+    const dx = look.x - ex, dy = look.y - ey, d = Math.hypot(dx, dy) || 1, k = Math.min(15, d/12);
+    const p = $(id).querySelector(".pupil");
+    p.setAttribute("cx", dx/d*k); p.setAttribute("cy", dy/d*k);
+  });
+}
+function lids(amount){ document.querySelectorAll("#face .lid").forEach(l => l.setAttribute("transform", `translate(0,-32) scale(1,${amount}) translate(0,32)`)); }
+function blink(){ lids(1.05); setTimeout(() => lids(0), 140); }
+(function blinker(){ setTimeout(() => { if (!asleep) blink(); blinker(); }, rnd(2500, 6000)); })();
+
+// ---------- the ways ----------
+const WAYS = [
+  {id:"switch", name:"Switched tabs", hint:"go look at something else"},
+  {id:"top",    name:"Went for the X", hint:"the X is up there somewhere"},
+  {id:"away",   name:"Clicked another window", hint:"another window will do"},
+  {id:"chase",  name:"Chased my button", hint:"there's a button here"},
+  {id:"caught", name:"Caught my button", hint:"it gets tired"},
+  {id:"esc",    name:"Pressed Escape", hint:"a key with a hopeful name"},
+  {id:"mod",    name:"Pressed " + MOD, hint:"half of a shortcut"},
+  {id:"shrink", name:"Squeezed me", hint:"make me smaller"},
+  {id:"long",   name:"Left for 30s+", hint:"leave, and mean it"},
+  {id:"reload", name:"Reloaded me", hint:"leave and come back at once"}
+];
+let found = store.get("found", []); if (!Array.isArray(found)) found = [];
+function renderWays(fresh){
+  const box = $("ways"); box.innerHTML = "";
+  WAYS.forEach(w => {
+    const d = document.createElement("div");
+    const ok = found.includes(w.id);
+    d.className = "way" + (ok ? " found" : "") + (fresh === w.id ? " stamp" : "");
+    d.textContent = ok ? w.name : "? " + w.hint;
+    box.appendChild(d);
+  });
+}
+function find(id){
+  if (found.includes(id)) return false;
+  found.push(id); store.set("found", found); renderWays(id);
+  if (found.length === WAYS.length) setTimeout(finale, 3200);
+  return true;
+}
+
+// ---------- log ----------
+let incidents = 0, attempts = 0;
+let oldLog = store.get("log", []); if (!Array.isArray(oldLog)) oldLog = [];
+const logBase = store.get("totalLog", 0);
+function addLogLi(n, when, text){
+  const li = document.createElement("li");
+  li.innerHTML = '<span class="n"></span> <span class="t"></span><br><span class="d"></span>';
+  li.querySelector(".n").textContent = "#" + n; li.querySelector(".t").textContent = when; li.querySelector(".d").textContent = text;
+  $("log").prepend(li);
+}
+oldLog.forEach(e => addLogLi(e[0], e[1], e[2]));
+function totalLog(){ return logBase + incidents; }
+function log(text){
+  incidents++;
+  const when = new Date().toLocaleString([], {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit", second:"2-digit"});
+  addLogLi(totalLog(), when, text);
+  if (!forgot){ oldLog.push([totalLog(), when, text]); while (oldLog.length > 80) oldLog.shift(); store.set("log", oldLog); store.set("totalLog", totalLog()); }
+  $("logBtn").textContent = "Departure log (" + totalLog() + ")";
+  if (!document.hidden && !titleBit) setTitle("(" + totalLog() + ") Don't Close This Tab");
+}
+function attempt(){ attempts++; settle(); }
+$("logBtn").onclick = () => $("drawer").classList.add("open");
+$("logClose").onclick = () => $("drawer").classList.remove("open");
+
+// ---------- stats ----------
+const t0 = Date.now();
+let leftCount = 0, longest = 0;
+const visit = store.get("visits", 0) + 1; store.set("visits", visit);
+$("sVisit").textContent = visit;
+setInterval(() => { $("sTime").textContent = dur(Date.now() - t0); $("sLeft").textContent = leftCount; }, 1000);
+
+// ---------- favicon + title ----------
+const fc = document.createElement("canvas"); fc.width = fc.height = 64;
+function favicon(mode, frame){
+  const c = fc.getContext("2d"); c.clearRect(0,0,64,64);
+  if (mode === "flag"){
+    c.fillStyle = "#1d1b18"; c.fillRect(14,6,5,54); c.fillStyle = "#fff"; c.strokeStyle="#1d1b18"; c.lineWidth=3;
+    c.beginPath(); c.moveTo(19,8); c.lineTo(56,14); c.lineTo(19,32); c.closePath(); c.fill(); c.stroke();
+  } else {
+    c.fillStyle = mode === "cry" ? "#c62a1f" : "#1d1b18"; c.beginPath(); c.arc(32,32,30,0,7); c.fill();
+    c.strokeStyle = "#fff"; c.fillStyle = "#fff"; c.lineWidth = 5; c.lineCap = "round";
+    if (mode === "cry"){
+      c.beginPath(); c.moveTo(12,28); c.quadraticCurveTo(32,40,52,28); c.stroke();
+      const y = 36 + ((frame||0) % 3) * 8; c.fillStyle = "#7cc4f2";
+      c.beginPath(); c.arc(22, y, 5, 0, 7); c.fill(); c.beginPath(); c.arc(42, y + 4 > 56 ? 38 : y + 4, 5, 0, 7); c.fill();
+    } else {
+      c.beginPath(); c.moveTo(10,32); c.quadraticCurveTo(32,10,54,32); c.quadraticCurveTo(32,54,10,32); c.stroke();
+      c.beginPath(); c.arc(32, mode === "up" ? 24 : 32, mode === "up" ? 5 : 7, 0, 7); c.fill();
+    }
+  }
+  $("fav").href = fc.toDataURL("image/png"); $("mirrorIcon").src = $("fav").href;
+}
+favicon("open");
+let titleBit = null, hintShown = false;
+let gameOn = false;
+function setTitle(t, force){
+  if (gameOn && !force && !document.hidden) return; // the title game owns the title while it runs
+  document.title = t;
+  const m = document.getElementById("mirrorText"); if (m) m.textContent = t;
+}
+function pointAtTitle(){
+  const tm = $("tabmirror"); tm.classList.remove("flash"); void tm.offsetWidth; tm.classList.add("flash");
+  if (!hintShown){ hintShown = true; $("tabhint").classList.add("on"); setTimeout(() => $("tabhint").classList.remove("on"), 5000); }
+}
+function titleShow(seq, every, then){ // a short title bit while the page is visible
+  clearInterval(titleBit); let i = 0;
+  setTitle(seq[0]);
+  titleBit = setInterval(() => {
+    i++;
+    if (i >= seq.length){ clearInterval(titleBit); titleBit = null; setTitle("(" + totalLog() + ") Don't Close This Tab"); if (then) then(); return; }
+    setTitle(seq[i]);
+  }, every);
+}
+
+// ---------- falling apart while you're away ----------
+const pieces = () => Array.from(document.querySelectorAll(".piece"));
+function wreck(amount){
+  pieces().forEach(el => {
+    el.style.transition = "none";
+    el.style.transform = `translate(${rnd(-160,160)*amount}px, ${rnd(-60,220)*amount}px) rotate(${rnd(-35,35)*amount}deg)`;
+  });
+  const f = $("fake"); f.style.transition = "none";
+  f.style.transform = `rotate(${rnd(-90,90)*amount}deg)`;
+}
+function rebuild(){
+  // force a frame so the wreck is visible, then snap back
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    pieces().forEach((el, i) => { el.style.transition = ""; el.style.transitionDelay = (i*0.06) + "s"; el.style.transform = ""; });
+    $("fake").style.transition = ""; $("fake").style.transform = "";
+    setTimeout(() => pieces().forEach(el => el.style.transitionDelay = ""), 2000);
+  }));
+}
+
+// ---------- events ----------
+let awaySince = null, hiddenTimer = null, blurAt = null;
+const seen = {};
+function nth(id){ seen[id] = (seen[id] || 0) + 1; return seen[id]; }
+const TAILS = ["Number {n}. I'm keeping count.", "That's {n} now.", "#{n}. Still here.", "{n} times. I've run out of new things to say about it.", "Time #{n}. I'm writing it down.", "{n}. My log is getting long."];
+function esc(lines, n){ return n <= lines.length ? lines[n - 1] : TAILS[(n - lines.length - 1) % TAILS.length].replace("{n}", n); }
+let saidWhileAway = [];
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden){
+    awaySince = Date.now(); leftCount++; attempt();
+    clearInterval(titleBit); titleBit = null; saidWhileAway = [];
+    const g = () => dur(Date.now() - awaySince);
+    const T = [
+      () => "come back?", () => "gone " + g(), () => "it's fine", () => "gone " + g(),
+      () => "it's not fine", () => "gone " + g(), () => "I'm talking to the tab bar now", () => "gone " + g(),
+      () => "is anyone reading this", () => "gone " + g(), () => "I've started falling apart", () => "gone " + g(),
+      () => "a cobweb. on me.", () => "gone " + g(), () => "I am a web page", () => "and I am alone",
+      () => "gone " + g(), () => "you left " + leftCount + (leftCount === 1 ? " time" : " times") + " this visit", () => "gone " + g(), () => "ok. new hobby: waiting",
+      () => "gone " + g(), () => "still open, btw", () => "gone " + g(), () => "I'll just say things then"
+    ];
+    let i = 0;
+    const show = () => { const t = T[Math.min(i, T.length - 1)](); setTitle(t); if (!t.startsWith("gone ")) saidWhileAway.push(t); };
+    show(); favicon("cry", 0);
+    hiddenTimer = setInterval(() => {
+      i++; if (i >= T.length) i = T.length - 8 + ((i - T.length) % 8); // loop the tail
+      show();
+      favicon("cry", i);
+      const gone = Date.now() - awaySince;
+      if (gone > 4000) wreck(Math.min(1, gone/15000));
+      if (gone > 30000) $("cobweb").classList.add("on");
+    }, 2500);
+  } else {
+    clearInterval(hiddenTimer); favicon("open");
+    const gone = Date.now() - (awaySince || Date.now()); awaySince = null; blurAt = null; lastInput = Date.now();
+    longest = Math.max(longest, gone);
+    const wrecked = gone > 4000;
+    const first = find("switch");
+    const n = nth("switch");
+    log("Switched away for " + words(gone) + ". Leave #" + leftCount + " this visit.");
+    setMood("shock", 1800);
+    setTitle("(" + totalLog() + ") Don't Close This Tab");
+    if (wrecked){ rebuild(); store.set("wrecks", store.get("wrecks", 0) + 1); }
+    if (saidWhileAway.length >= 2){
+      const lines = [...new Set(saidWhileAway)].slice(-6);
+      $("replay").innerHTML = "While you were gone, my tab title said:<br>";
+      const b = document.createElement("b"); b.textContent = lines.map(l => "“" + l + "”").join("  ·  "); $("replay").appendChild(b);
+      $("replay").classList.add("on"); window.__rpAt = Date.now(); clearTimeout(window.__rp); window.__rp = setTimeout(() => $("replay").classList.remove("on"), 9000);
+      pointAtTitle();
+    }
+    if (gone >= 30000){
+      find("long");
+      log("Away " + words(gone) + ". Cobwebs formed.");
+      $("faceWrap").classList.add("asleep");
+      setTimeout(() => { $("faceWrap").classList.remove("asleep"); $("cobweb").classList.remove("on"); }, 3500);
+      sayNow("Oh! You're back.", words(gone) + ". I grew cobwebs.");
+      say("They're fake cobwebs.", "The " + words(gone) + " were real.");
+    } else if (wrecked){
+      sayNow(esc(["I fell apart.", "Don't look at me.", "I'm fine. I'm fine.", "This is just how I look now."], n), "You were gone " + words(gone) + ". Pulling myself together.");
+    } else {
+      sayNow(esc(["You LEFT.", "Again?", "Leave #" + leftCount + " this visit.", "You keep doing that.", "I've stopped being surprised.", "I have not stopped being surprised."], n),
+        n === 1 ? "For " + words(gone) + ". Stay away longer. Watch my tab title." : "Gone " + words(gone) + ".");
+    }
+  }
+});
+
+window.addEventListener("blur", () => {
+  blurAt = Date.now();
+  setTimeout(() => { if (blurAt && !document.hidden){ document.body.classList.add("elsewhere"); setMood("sulk", 99999); lookAt(-2000, innerHeight/2); const n = (seen.blur || 0) + 1; sayNow(esc(["Who is that.", "Them again?", "I see how it is.", "Fine. Go type to them."], n), "You clicked on another window. I'm still on screen. Sulking."); } }, 250);
+});
+window.addEventListener("focus", () => {
+  document.body.classList.remove("elsewhere");
+  if (blurAt && !document.hidden && awaySince === null){
+    const gone = Date.now() - blurAt; blurAt = null; moodLock = 0;
+    if (gone < 700) { settle(); return; }
+    attempt();
+    find("away");
+    log("Focus went to another window for " + words(gone) + ".");
+    setMood("happy", 1500); const n = nth("blur");
+    sayNow(esc(["You picked me.", "You came back to me.", "Me again. Good choice.", "I knew you'd pick me. I didn't."], n), words(gone) + " later.");
+  }
+  blurAt = null;
+});
+
+let lastTop = 0;
+document.addEventListener("mouseout", e => {
+  if (e.relatedTarget || e.toElement || e.clientY > 2) return;
+  if (Date.now() - lastTop < 5000) return;
+  lastTop = Date.now(); attempt();
+  const first = find("top");
+  log("Cursor left out the top edge, toward the X.");
+  $("app").classList.add("lookup"); $("faceWrap").classList.add("peek");
+  setMood("panic", 3000); lookAt(e.clientX, -500); favicon("up");
+  const TB = [["no", "no no", "no no no", "NO NO NO NO", "...please"], ["not the X", "NOT THE X", "anything but the X"], ["hi up there", "it's me. the tab", "I can feel your cursor"], ["you again", "my X is not for you", "(it is for you)"]];
+  titleShow(TB[Math.min((seen.top || 0), TB.length - 1)], 1700, () => favicon("open"));
+  pointAtTitle(); const n = nth("top");
+  sayNow(esc(["Look at the tab title.", "Not up there again.", "You know where the X is.", "Your cursor keeps going north.", "I'm out of ways to say no."], n), n === 1 ? "It's right next to your cursor." : "The title has opinions.");
+  setTimeout(() => { $("app").classList.remove("lookup"); $("faceWrap").classList.remove("peek"); }, 3200);
+});
+
+let lastKey = {};
+function keycap(label, note, run){
+  const k = document.createElement("div"); k.className = "key pop";
+  k.innerHTML = label + "<small></small>"; k.querySelector("small").textContent = note;
+  // keep it clear of the face and every line of text
+  const fr = $("faceWrap").getBoundingClientRect();
+  const textBottom = Math.max($("sub").getBoundingClientRect().bottom, $("replay").classList.contains("on") ? $("replay").getBoundingClientRect().bottom : 0);
+  const waysTop = $("ways").getBoundingClientRect().top;
+  if (fr.left > 170){ k.style.left = (fr.left - 150) + "px"; k.style.top = (fr.top + fr.height * 0.25) + "px"; }
+  else if (innerWidth - fr.right > 170){ k.style.left = (fr.right + 40) + "px"; k.style.top = (fr.top + fr.height * 0.25) + "px"; }
+  else if (waysTop - textBottom > 170){ k.style.left = (innerWidth/2 - 55) + "px"; k.style.top = (textBottom + 20) + "px"; }
+  else { k.style.left = "12px"; k.style.top = Math.max(8, waysTop - 160) + "px"; k.style.transform = "scale(.6)"; }
+  document.body.appendChild(k);
+  if (run) setTimeout(() => k.classList.add("run"), 900);
+  setTimeout(() => k.remove(), run ? 2600 : 2800);
+}
+document.addEventListener("keydown", e => {
+  const now = Date.now();
+  if ((e.ctrlKey || e.metaKey) && (e.key === "a" || e.key === "A")){ secret("all"); setMood("shock", 1500); sayNow("All of me? At once?", "You selected everything on the page."); }
+  if (e.key === "Escape"){
+    if ($("drawer").classList.contains("open")){ $("drawer").classList.remove("open"); return; }
+    if ($("veil").classList.contains("on")){ find("esc"); $("dNo").click(); return; }
+    if (now - (lastKey.esc||0) < 2500) return; lastKey.esc = now; attempt();
+    const first = find("esc"); log("Pressed Escape.");
+    keycap("Esc", "escaping", true); setMood("shock", 1500);
+    const n = nth("esc");
+    sayNow(esc(["Escape escaped.", "It left without you again.", "Escape has left 3 times. You haven't left once.", "Escape is having a better day than you.", "Escape sends its regards."], n), "You're still here, though.");
+  }
+  if (e.key === "Control" || e.key === "Meta"){ modAlone = true; return; }
+  modAlone = false;
+});
+let modAlone = false;
+document.addEventListener("keyup", e => {
+  const now = Date.now();
+  if ((e.key === "Control" || e.key === "Meta") && modAlone){
+    modAlone = false;
+    if (now - (lastKey.mod||0) < 3000) return; lastKey.mod = now; attempt();
+    const first = find("mod"); log("Pressed " + MOD + ".");
+    keycap("W", "guarding W (symbolically)", false);
+    if (!reduce){ document.body.animate([{transform:"translateX(0)"},{transform:"translateX(-8px)"},{transform:"translateX(8px)"},{transform:"translateX(0)"}], {duration:260}); }
+    setMood("panic", 2200);
+    const n = nth("mod");
+    sayNow(esc([MOD + "! W is RIGHT THERE.", MOD + " again.", "Third " + MOD + ". The W is getting nervous.", "You've pressed " + MOD + " " + n + " times and never W.", "Are you even trying?"], n), "I can't stop you. I can only make this face.");
+  }
+});
+
+let lastW = innerWidth, lastH = innerHeight, rz = null;
+addEventListener("resize", () => {
+  clearTimeout(rz);
+  rz = setTimeout(() => {
+    const lw = lastW - innerWidth, lh = lastH - innerHeight;
+    if (lw >= 80 || lh >= 80){
+      attempt(); find("shrink");
+      const bits = []; if (lw >= 80) bits.push(lw + "px narrower"); if (lh >= 80) bits.push(lh + "px shorter");
+      log("Window resized " + lastW + "×" + lastH + " → " + innerWidth + "×" + innerHeight + ".");
+      $("faceWrap").classList.remove("squish"); void $("faceWrap").offsetWidth; $("faceWrap").classList.add("squish");
+      setMood("shock", 1500);
+      const n = nth("shrink");
+      sayNow(esc(["Ow.", "OW.", "I'm not a fan of this.", "There's barely any of me left."], n), bits.join(", ") + ". There's less of me now.");
+    }
+    lastW = innerWidth; lastH = innerHeight; keepFakeOnScreen();
+  }, 400);
+});
+
+document.addEventListener("copy", () => {
+  const s = String(getSelection() || "").trim().replace(/\s+/g, " ");
+  if (!s) return;
+  const bit = s.length > 30 ? s.slice(0, 30) + "…" : s;
+  log("Copied “" + bit + "”.");
+  secret("copy");
+  sayNow("Hey. That's mine.", "You copied “" + bit + "”.");
+});
+
+// idle → asleep
+let lastInput = Date.now(), asleep = false;
+function wake(){
+  lastInput = Date.now(); drowsySaid = false; if (!asleep) lids(0);
+  if (asleep){ asleep = false; $("faceWrap").classList.remove("asleep"); lids(0); setMood("shock", 1200); sayNow("I'm up! I'm up.", "You didn't move for " + words(sleptAt - sleepFrom + 20000) + ". I napped."); }
+}
+let sleptAt = 0, sleepFrom = 0, drowsySaid = false, lastSleepy = -1e9;
+["mousemove","keydown","pointerdown","touchstart","wheel"].forEach(ev => addEventListener(ev, () => { if (asleep) sleptAt = Date.now(); wake(); }, {passive:true}));
+setInterval(() => {
+  if (document.hidden || asleep || ended) return;
+  const idle = Date.now() - lastInput;
+  if (idle > 8000 && idle <= 20000 && !stare){ lids(Math.min(0.85, (idle - 8000) / 12000)); if (idle > 12000 && !drowsySaid && Date.now() - lastSleepy > 120e3){ drowsySaid = true; lastSleepy = Date.now(); say("…getting… sleepy…", "You haven't moved in 12 seconds."); } }
+  if (idle > 20000){ asleep = true; sleepFrom = Date.now(); lids(1.05); $("faceWrap").classList.add("asleep"); say("z z z", "Nothing from you for 20 seconds. I fell asleep."); secret("sleep"); }
+}, 1000);
+
+addEventListener("mousemove", e => { if (!document.body.classList.contains("elsewhere") && !$("faceWrap").classList.contains("peek")) lookAt(e.clientX, e.clientY); dodgeCheck(e.clientX, e.clientY); }, {passive:true});
+
+// ---------- the close button with tricks ----------
+const fake = $("fake");
+let dodges = 0, tired = false, decoys = [];
+const TRICKS = ["jump", "tiny", "split", "disguise", "behind", "tired"];
+function placeFake(el, x, y){
+  const bw = el.offsetWidth, bh = el.offsetHeight;
+  el.style.left = Math.min(Math.max(8, x), innerWidth - bw - 8) + "px";
+  el.style.top = Math.min(Math.max(8, y), innerHeight - bh - 8) + "px";
+  el.style.right = "auto";
+}
+function keepFakeOnScreen(){ const r = fake.getBoundingClientRect(); placeFake(fake, r.left, r.top); }
+function covered(x, y, w, h){ // would a box here sit on the face or any line of text?
+  return ["bubble", "sub", "replay", "faceWrap", "tabmirror", "ways", "secrets", "next", "bottom", "gamebox"].some(id => {
+    const el = $(id); if (!el) return false; const r = el.getBoundingClientRect();
+    if (id === "bubble" || id === "sub" || id === "replay"){ // only the text itself, not the empty width
+      const range = document.createRange(); range.selectNodeContents(el); const t = range.getBoundingClientRect();
+      if (!t.width) return false;
+      return !(x + w < t.left - 10 || x > t.right + 10 || y + h < t.top - 10 || y > t.bottom + 10);
+    }
+    return !(x + w < r.left - 8 || x > r.right + 8 || y + h < r.top - 8 || y > r.bottom + 8);
+  });
+}
+function farFrom(mx, my){
+  const w = 190, h = 44;
+  let best = null, bd = -1, fallback = [20, 20], fd = -1;
+  for (let i = 0; i < 60; i++){
+    const x = rnd(8, Math.max(9, innerWidth - w - 8)), y = rnd(8, Math.max(9, innerHeight - h - 8)), d = Math.hypot(x - mx, y - my);
+    if (d > fd){ fd = d; fallback = [x, y]; }
+    if (!covered(x, y, w, h) && d > bd){ bd = d; best = [x, y]; }
+  }
+  return best || fallback;
+}
+function dodgeCheck(mx, my, force){
+  if (tired || $("veil").classList.contains("on")) return;
+  const r = fake.getBoundingClientRect();
+  const reach = 46 + Math.max(r.width, r.height) / 2;
+  if (!force && Math.hypot(mx - (r.left + r.width/2), my - (r.top + r.height/2)) > reach) return;
+  const trick = TRICKS[Math.min(dodges, TRICKS.length - 1)];
+  dodges++;
+  if (dodges === 1){ attempt(); find("chase"); log("Went for the close button. It ran."); }
+  fake.classList.remove("tiny");
+  fake.textContent = "Close tab ✕";
+  const [x, y] = farFrom(mx, my);
+  if (trick === "jump"){ placeFake(fake, x, y); sayNow(dodges === 1 ? "It ran!" : pick(["Nope.", "Too slow.", "Still running."]), dodges === 1 ? "I didn't tell it to. It's scared too." : ""); }
+  if (trick === "tiny"){ placeFake(fake, x, y); fake.classList.add("tiny"); sayNow("It's trying to be small.", "Small buttons are harder to press. It read that somewhere."); }
+  if (trick === "split"){
+    placeFake(fake, x, y);
+    for (let i = 0; i < 3; i++){
+      const d = fake.cloneNode(true); d.removeAttribute("id"); d.className = "decoy"; d.style.cssText = fake.style.cssText;
+      Object.assign(d.style, {position:"fixed", zIndex:19, background:getComputedStyle(fake).backgroundColor, color:getComputedStyle(fake).color, border:0, borderRadius:"5px", padding:"9px 14px", font:"600 14px ui-monospace,Menlo,Consolas,monospace", cursor:"pointer"});
+      document.body.appendChild(d); const [dx, dy] = farFrom(rnd(0, innerWidth), rnd(0, innerHeight)); placeFake(d, dx, dy);
+      d.addEventListener("mouseenter", () => { sayNow("That one's a decoy.", "They all are, technically."); d.remove(); });
+      d.addEventListener("click", () => d.remove());
+      decoys.push(d);
+    }
+    setTimeout(() => { decoys.forEach(d => d.remove()); decoys = []; }, 4500);
+    sayNow("It brought friends.", "");
+  }
+  if (trick === "disguise"){
+    placeFake(fake, x, y); fake.textContent = "Stay here ♥";
+    sayNow("That's not a disguise.", "That's the same button with a different label.");
+    setTimeout(() => { if (!tired) fake.textContent = "Close tab ✕"; }, 3000);
+  }
+  if (trick === "behind"){
+    const fr = $("faceWrap").getBoundingClientRect();
+    placeFake(fake, fr.left + fr.width/2 - fake.offsetWidth/2, fr.top + fr.height*0.75);
+    fake.style.zIndex = 0; setTimeout(() => fake.style.zIndex = "", 2500);
+    sayNow("It's hiding behind me.", "I didn't agree to this.");
+  }
+  if (trick === "tired"){
+    tired = true; const ts = farFrom(innerWidth/2, innerHeight/2); placeFake(fake, ts[0], ts[1]); fake.classList.add("tired"); fake.textContent = "Close tab ✕ (tired)";
+    sayNow("It's exhausted.", "It ran " + dodges + " times. You can catch it now.");
+  }
+}
+fake.addEventListener("touchstart", e => { if (tired) return; e.preventDefault(); const t = e.touches[0]; dodgeCheck(t.clientX, t.clientY); }, {passive:false});
+fake.addEventListener("mousedown", e => { if (!tired && e.button === 0){ e.preventDefault(); fake.dataset.dodged = "1"; dodgeCheck(e.clientX, e.clientY, true); } });
+fake.addEventListener("click", e => {
+  if (fake.dataset.dodged){ delete fake.dataset.dodged; return; }
+  const first = find("caught");
+  if (first && !found.includes("chase")) find("chase");
+  attempt();
+  log(dodges ? "Caught the close button after " + (dodges) + " dodges." : "Pressed the close button.");
+  openDialog();
+});
+
+// ---------- the "are you sure" that escalates ----------
+const STEPS = [
+  {q:"Close this tab?", d:"", yes:"Close", no:"Stay"},
+  {q:"Are you sure?", d:"", yes:"Yes", no:"No, stay"},
+  {q:"Are you sure you're sure?", d:"This tab has been with you for {t}. (The buttons swapped. Read carefully.)", yes:"Yes", no:"Stay"},
+  {q:"It has logged {n} of your attempts.", d:"It took every one personally.", yes:"Still yes", no:"Stay"},
+  {q:"Okay. Last chance.", d:"Press Close and see what happens.", yes:"Close", no:"Stay"}
+];
+let step = 0;
+function openDialog(){ step = 0; showStep(); $("veil").classList.add("on"); setMood("panic", 99999); setTimeout(() => $("dNo").focus(), 50); }
+function showStep(){
+  const s = STEPS[step];
+  const fill = x => x.replace("{t}", words(Date.now() - t0)).replace("{n}", incidents);
+  $("dq").textContent = fill(s.q); $("dd").textContent = fill(s.d);
+  $("dYes").textContent = s.yes; $("dNo").textContent = s.no;
+  $("dYes").style.fontSize = Math.max(9, 15 - step*1.6) + "px"; $("dYes").style.padding = Math.max(3, 9 - step*1.5) + "px " + Math.max(6, 16 - step*2.5) + "px";
+  const row = document.querySelector(".dlg .row");
+  if (step === 2) row.insertBefore($("dNo"), $("dYes")); else row.insertBefore($("dYes"), $("dNo"));
+  $("dYes").dataset.shy = step === 3 ? "1" : "";
+  $("dYes").style.transform = "";
+  $("dNo").style.fontSize = (15 + step*3) + "px"; $("dNo").style.padding = (9 + step*2) + "px " + (16 + step*4) + "px";
+}
+function closeDialog(){ $("veil").classList.remove("on"); document.querySelector(".dlg").classList.remove("crack"); moodLock = 0; settle(); }
+$("dNo").onclick = () => { log("Chose to stay, at question " + (step + 1) + "."); closeDialog(); setMood("happy", 2500); sayNow("You stayed!", "At question " + (step + 1) + " of " + STEPS.length + ". I'll remember this. Until you close me."); };
+$("dYes").addEventListener("mouseenter", () => {
+  if ($("dYes").dataset.shy !== "1") return;
+  $("dYes").dataset.shy = "done"; $("dYes").style.transform = "translate(" + (rnd(0,1) < .5 ? -140 : -60) + "px, 46px)";
+  $("dd").textContent = "It flinched. It's still a button. You can still press it.";
+});
+$("dYes").onclick = () => {
+  if (step < STEPS.length - 1){ step++; showStep(); return; }
+  if (closing) return; closing = true;
+  document.querySelector(".dlg").classList.add("crack");
+  setTimeout(() => {
+    closeDialog();
+    // Browsers refuse window.close() for a tab the person opened, unless the tab has only one page in its history.
+    const refuses = history.length > 1 && !window.opener;
+    if (refuses){ try { window.close(); } catch(e){} }
+    setTimeout(() => {
+      const fw = $("faceWrap");
+      if (refuses){
+        log("Pressed Close at the last question. I called window.close(). I'm still open, so the browser said no.");
+        setMood("panic", 1700);
+        fw.classList.remove("flyaway"); void fw.offsetWidth; if (!reduce) fw.classList.add("flyaway");
+        sayNow("I tried to close myself!", "Really. I called window.close(). The browser said no.");
+      } else {
+        log("Pressed Close at the last question. I didn't call window.close(). In this tab it might work.");
+        setMood("nervous", 2500);
+        sayNow("I almost tried to close myself.", "In a fresh tab like this one, window.close() might actually work. I'm not ready.");
+      }
+      setTimeout(() => { fw.classList.remove("flyaway"); setMood("shock", 2500);
+        say("That button was never real.", "The X on the tab always was. Use it whenever.");
+        closing = false; }, 3600);
+    }, 300);
+    tired = true;
+  }, 650);
+};
+let closing = false;
+
+// ---------- finale ----------
+let ended = false, finaleDone = false;
+function finale(){
+  if (finaleDone) return;
+  if (busy || q.length || $("veil").classList.contains("on") || document.hidden){ setTimeout(finale, 800); return; } // let the current line finish
+  finaleDone = true; ended = true;
+  const total = prevTotal + Date.now() - t0, logs = totalLog();
+  sayNow("That's all ten.", "I've got nothing left.");
+  setMood("shock", 3000);
+  setTimeout(() => {
+    if (!reduce){
+      const els = ["header", "#ways", "#secrets", "#next", "#bottom", "#sub", "#replay", "#fake"].map(s => document.querySelector(s));
+      els.forEach((el, i) => { el.style.setProperty("--r", rnd(-50,50) + "deg"); el.style.animationDelay = (i * 0.07) + "s"; el.classList.add("fall"); });
+    } else { document.querySelectorAll("header,#ways,#secrets,#next,#bottom,#sub,#fake").forEach(el => el.style.opacity = 0); }
+    favicon("flag");
+    titleShow(["ok", "ok you win", "🏳 you may leave"], 1800, () => setTitle("🏳 you may leave"));
+  }, 3400);
+  setTimeout(() => {
+    $("certStats").textContent = (visit > 1 ? "Over " + visit + " visits: " : "") + dur(total) + " with me, " + logs + " entr" + (logs === 1 ? "y" : "ies") + " in the departure log.";
+    $("finale").classList.add("on");
+    requestAnimationFrame(() => requestAnimationFrame(() => $("finale").classList.add("slam")));
+    if (!reduce) document.body.animate([{transform:"translateY(0)"},{transform:"translateY(10px)"},{transform:"translateY(0)"}], {duration:200, delay:250});
+    setMood("calmEnd", 99999);
+  }, 6000);
+  setTimeout(() => { $("finale").classList.remove("on", "slam"); sayNow("Fine. I'll leave first.", "Watch the tab title."); }, 13000);
+  setTimeout(() => {
+    const fw = $("faceWrap"); fw.style.transition = ""; if (!reduce) fw.classList.add("walkoff"); else fw.style.opacity = 0;
+    titleShow(["leaving in 3", "leaving in 2", "leaving in 1", "...", "I can't leave either", "I'm a tab"], 1800, () => {
+      fw.classList.remove("walkoff"); fw.style.opacity = "";
+      setMood("sulk", 4000);
+      sayNow("I'm back. I can't go anywhere.", "Only you can close me. You always could.");
+      say("So. Encore?", "Everything still works. The surprises keep coming. Your title-game best is " + G.best + ".");
+      setTimeout(keepPlaying, 2500);
+    });
+  }, 16500);
+}
+function keepPlaying(){ // put the page back together and carry on
+  $("finale").classList.remove("on", "slam");
+  document.querySelectorAll(".fall").forEach(el => { el.classList.remove("fall"); el.style.animationDelay = ""; });
+  document.querySelectorAll("header,#ways,#secrets,#next,#bottom,#sub,#fake").forEach(el => el.style.opacity = "");
+  ended = false; moodLock = 0; settle(); favicon("open"); setTitle("(" + totalLog() + ") Don't Close This Tab");
+  $("honest").textContent = "All 10 found. Nothing here can stop you closing this tab.";
+}
+$("keep").onclick = keepPlaying;
+$("share").onclick = () => {
+  const logs = totalLog();
+  const w = store.get("wrecks", 0);
+  const txt = "I tried to leave a browser tab 10 different ways. It logged " + logs + " attempts" + (w ? " and fell apart " + (w === 1 ? "once" : w + " times") : "") + ". " + location.href.split("#")[0];
+  const done = () => { $("share").textContent = "Copied"; setTimeout(() => $("share").textContent = "Copy my record", 2000); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, () => prompt("Copy this:", txt));
+  else prompt("Copy this:", txt);
+};
+$("forget").onclick = () => {
+  try { Object.keys(localStorage).filter(k => k.startsWith("dcttpet_")).forEach(k => localStorage.removeItem(k)); } catch(e){}
+  found = []; secrets = []; oldLog = []; forgot = true; viewMs = 0; stage = 0; improvAt = Infinity; coins = 0; owned = []; worn = []; room = ""; mood01 = 50; applyOutfit(); renderHud(); if (gameOn) stopGame(); $("gamebox").classList.remove("on"); renderWays(); renderSecrets(); drawBandages(0);
+  sayNow("Forgotten.", "Your visits and your list are gone. This visit's log stays until you close me.");
+};
+
+// ---------- memory between visits ----------
+let forgot = false;
+const prevTotal = store.get("totalMs", 0), prevLog = store.get("totalLog", 0);
+function heartbeat(){ if (forgot) return; store.set("lastSeen", Date.now()); store.set("lastStay", Date.now() - t0); store.set("totalMs", prevTotal + Date.now() - t0); store.set("totalLog", prevLog + incidents); }
+setInterval(heartbeat, 2000); addEventListener("pagehide", heartbeat);
+
+
+// ---------- the longer you stay ----------
+// Things unlock by how long this tab has been in view, added up over all your visits.
+let viewMs = store.get("viewMs", 0), lastTick = Date.now();
+setInterval(() => { const now = Date.now(); if (!document.hidden) viewMs += now - lastTick; lastTick = now; if (!forgot) store.set("viewMs", viewMs); }, 250);
+function toast(t){ const el = $("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("on"), 4500); }
+const busyNow = () => $("veil").classList.contains("on") || closing || document.hidden;
+
+// cursor trail, for the painting
+const trail = []; let travelled = 0, lastPt = null, clicks = 0, topExits = 0;
+addEventListener("mousemove", e => {
+  const now = Date.now();
+  if (lastPt){ travelled += Math.hypot(e.clientX - lastPt[0], e.clientY - lastPt[1]); if (now - lastPt[2] < 30) return; }
+  lastPt = [e.clientX, e.clientY, now]; trail.push([e.clientX / innerWidth, e.clientY / innerHeight]); if (trail.length > 6000) trail.shift();
+}, {passive:true});
+addEventListener("pointerdown", () => clicks++, {passive:true});
+document.addEventListener("mouseout", e => { if (!e.relatedTarget && !e.toElement && e.clientY <= 2) topExits++; });
+
+const STAGES = [
+  {at: 60e3, name:"a hat", run(){
+    gift("hat"); setMood("happy", 3000); toast("UNLOCKED AT 1 MINUTE: A FREE HAT");
+    sayNow("You've stayed a whole minute.", "I'm wearing a hat now. This is a celebration.");
+    log("Stayed 1 minute in view. Put on a hat.");
+  }},
+  {at: 120e3, name:"a painting", run(){
+    toast("UNLOCKED AT 2 MINUTES: ART");
+    const c = $("paint"); c.width = innerWidth * devicePixelRatio; c.height = innerHeight * devicePixelRatio;
+    c.style.width = innerWidth + "px"; c.style.height = innerHeight + "px";
+    const x = c.getContext("2d"); x.scale(devicePixelRatio, devicePixelRatio);
+    const W = Math.min(560, innerWidth - 60), H = Math.min(340, innerHeight - 200), L = (innerWidth - W)/2, T = (innerHeight - H)/2 - 20;
+    const f = $("frame"); Object.assign(f.style, {left:(L-10)+"px", top:(T-10)+"px", width:(W+20)+"px", height:(H+20)+"px"});
+    f.querySelector(".plaque").textContent = "“Where your mouse went” · " + Math.round(travelled).toLocaleString() + " px";
+    x.fillStyle = getComputedStyle(document.body).backgroundColor; x.fillRect(L, T, W, H);
+    x.lineWidth = 2.2; x.lineCap = "round"; x.lineJoin = "round";
+    const pts = trail.slice(); let i = 1;
+    c.classList.add("on"); f.classList.add("on");
+    const step = () => {
+      for (let k = 0; k < 40 && i < pts.length; k++, i++){
+        x.strokeStyle = `hsl(${(i / pts.length) * 300}, 75%, 58%)`;
+        x.beginPath(); x.moveTo(L + pts[i-1][0]*W, T + pts[i-1][1]*H); x.lineTo(L + pts[i][0]*W, T + pts[i][1]*H); x.stroke();
+      }
+      if (i < pts.length) requestAnimationFrame(step);
+    };
+    step();
+    sayNow("I painted where your mouse went.", "All " + Math.round(travelled).toLocaleString() + " pixels of it, in the order you went.");
+    say("Gorgeous.", topExits ? "The lines at the top are the " + topExits + (topExits === 1 ? " time" : " times") + " you went for the X." : "You never once went for the X. I'm touched.");
+    log("Stayed 2 minutes. Painted your cursor's path: " + Math.round(travelled) + " px.");
+    setTimeout(() => { c.classList.remove("on"); f.classList.remove("on"); }, 11000);
+  }},
+  {at: 180e3, name:"a game in my tab title", run(){
+    toast("UNLOCKED AT 3 MINUTES: A GAME");
+    sayNow("I made you a game.", "It's in my tab title. Look up. Press Space to jump.");
+    pointAtTitle(); startGame();
+    log("Stayed 3 minutes. Started a game in the tab title.");
+  }},
+  {at: 300e3, name:"I improvise", run(){
+    toast("5 MINUTES OF LOOKING AT ME");
+    setMood("shock", 2500);
+    sayNow("Five minutes of you looking at me.", (visit > 1 ? "Counting all your visits. " : "") + "I didn't plan anything past this. I'll improvise.");
+    log("Stayed 5 minutes. Out of plans. Improvising.");
+    improvAt = viewMs + 25e3;
+  }}
+];
+let stage = 0, improvAt = Infinity, lastStageAt = 0;
+// already unlocked on an earlier visit: keep the hat, keep the game on a button
+while (stage < STAGES.length && viewMs >= STAGES[stage].at) stage++;
+
+if (stage >= 3){ $("gamebox").classList.add("on"); $("gameinfo").textContent = "Best " + G_best() + ". The game plays in the tab title."; $("gJump").textContent = "Play the title game"; }
+if (stage >= 4) improvAt = viewMs + 30e3;
+function G_best(){ return store.get("best", 0); }
+function nextText(){
+  if (stage >= STAGES.length) return "From here on, every so often, I'll make something up.";
+  const left = STAGES[stage].at - viewMs;
+  return "Next surprise in " + dur(Math.max(0, left)) + " of looking at me." + (visit > 1 && viewMs > 5e3 ? " (Time from your earlier visits counts.)" : "");
+}
+setInterval(() => {
+  $("app").classList.toggle("tight", $("gamebox").classList.contains("on") || $("replay").classList.contains("on") || innerHeight < 700);
+  $("next").textContent = ended ? "" : nextText();
+  if (viewMs > 90e3 && !renderSecrets.hinted){ renderSecrets.hinted = true; renderSecrets(); }
+  if (busyNow() || ended) return;
+  if (stage < STAGES.length && viewMs >= STAGES[stage].at && Date.now() - lastStageAt > 25e3){ STAGES[stage].run(); stage++; lastStageAt = Date.now(); return; }
+  if (viewMs >= improvAt){ improvise(); improvAt = viewMs + rnd(35e3, 50e3); }
+}, 500);
+
+// improvised bits after 5 minutes; each says only true things
+const IMPROV = [
+  () => { const last = oldLog.slice(-3).reverse(); sayNow("A dramatic reading of my log.", ""); last.forEach(e => say("“" + e[2] + "”", "Entry #" + e[0] + ".")); say("Thank you.", ""); },
+  () => { document.querySelectorAll(".way").forEach((w, i) => setTimeout(() => { w.classList.remove("wave"); void w.offsetWidth; w.classList.add("wave"); }, i * 90)); sayNow("I'm juggling your attempts.", found.length + " of them. Badly."); },
+  () => { sayNow("Staring contest.", "Don't move your mouse for 8 seconds. Go."); stare = Date.now(); setMood("worried", 9000); lookAt(innerWidth/2, innerHeight/2); },
+  () => { titleShow(["♪ don't", "♪ don't close", "♪ don't close me", "♪ I'm just a tab ♪", "♪ in your browser ♪", "♪ (" + leftCount + " leaves) ♪"], 1300); pointAtTitle(); sayNow("I wrote a song.", "It's in my tab title. It's short."); },
+  () => { const w = Math.round(travelled / innerWidth * 10) / 10; sayNow("Fun fact.", "Your mouse has crossed " + w + " screen widths since you got here."); },
+  () => { sayNow("Can I ask you something?", "You've clicked " + clicks + " times on this page. What were you hoping for?"); },
+  () => { $("faceWrap").classList.remove("squish"); void $("faceWrap").offsetWidth; $("faceWrap").classList.add("squish"); sayNow("Stretching.", "This visit, I've been open for " + dur(Date.now() - t0) + "."); },
+  () => { sayNow("Your departure log has " + totalLog() + " entries.", "I'd frame it, but I already framed your mouse."); }
+];
+let improvOrder = [], stare = 0;
+function improvise(){
+  if (!improvOrder.length) improvOrder = IMPROV.map((_, i) => i).sort(() => Math.random() - .5);
+  IMPROV[improvOrder.pop()]();
+}
+addEventListener("mousemove", () => {
+  if (!stare) return;
+  const held = Date.now() - stare; stare = 0;
+  if (held < 8000){ setMood("happy", 2000); sayNow("You moved!", "After " + secs(held) + ". I win."); log("Lost a staring contest after " + secs(held) + "."); }
+}, {passive:true});
+setInterval(() => { if (stare && Date.now() - stare >= 8000){ stare = 0; blink(); setMood("sulk", 2000); sayNow("Fine. You win.", "8 seconds without moving. I blinked."); log("Won a staring contest."); } }, 300);
+
+// ---------- the game in the tab title ----------
+const PRIZES = [{at:5, name:"sunglasses", el:"shades"}, {at:10, name:"a gold hat", el:"gold"}, {at:20, name:"a crown", el:"crown"}, {at:35, name:"a monocle", el:"monocle"}];
+function p_at(p){ return p.at + "+"; }
+function wearPrizes(){ const b = store.get("best", 0); PRIZES.forEach(p => { if (b >= p.at && typeof gift === "function") gift(p.el); }); }
+function nextPrize(){ const b = store.get("best", 0); const p = PRIZES.find(p => b < p.at); return p ? " Next prize at " + p.at + ": " + p.name + "." : " You've won every prize."; }
+const G = {len:14, x:2, obs:[], jump:0, score:0, tick:null, best:store.get("best", 0), dead:false};
+function startGame(){
+  gameOn = true; G.obs = []; G.jump = 0; G.calm = 8; G.score = 0; G.dead = false; G.waiting = true; $("gamebox").classList.add("on");
+  clearInterval(G.tick); G.tick = setInterval(gameStep, 270); gameStep();
+}
+function stopGame(){ gameOn = false; clearInterval(G.tick); $("gamebox").classList.remove("on"); setTitle("(" + totalLog() + ") Don't Close This Tab"); }
+function gameStep(){
+  if (document.hidden) return;
+  if (G.waiting){ setTitle("● press Space to play", true); $("gamerow").textContent = "● press Space"; $("gameinfo").textContent = "Best " + G.best + ". The game plays in the tab title. Space or the button to start."; return; }
+  if (!G.dead){
+    G.obs = G.obs.map(o => o - 1).filter(o => o >= 0);
+    const lastO = G.obs.length ? G.obs[G.obs.length - 1] : -99;
+    if (G.calm > 0) G.calm--;
+    else if (G.len - 1 - lastO > 4 && Math.random() < 0.28) G.obs.push(G.len - 1);
+    if (G.jump > 0) G.jump--;
+    if (G.obs.includes(G.x) && G.jump === 0){
+      G.dead = true; const before = G.best; G.best = Math.max(G.best, G.score); store.set("best", G.best);
+      const prize = PRIZES.find(p => before < p.at && G.best >= p.at);
+      earn(G.score, "title game score " + G.score);
+      if (G.score >= goal && store.get("goalDay", "") !== today){ store.set("goalDay", today); setTimeout(() => { earn(25, "today's title-game goal"); toast("DAILY GOAL DONE: +25"); renderDaily(); }, 1200); }
+      if (prize){ wearPrizes(); toast("TITLE GAME PRIZE: " + prize.name.toUpperCase()); setTimeout(() => sayNow("You won me " + prize.name + "!", "For scoring " + p_at(prize) + " in the title game. I'm wearing it."), 2700); }
+      log("Title game: crashed with a score of " + G.score + ".");
+      sayNow(G.score >= G.best && G.score > 0 ? "New best: " + G.score + "!" : "You crashed.", "Score " + G.score + ". Best " + G.best + ". Space to go again.");
+    } else if (G.obs.includes(G.x)) { G.score++; }
+  }
+  let row = "";
+  for (let i = 0; i < G.len; i++) row += i === G.x ? (G.dead ? "✖" : G.jump ? "˚" : "●") : G.obs.includes(i) ? "▲" : "_";
+  setTitle(G.dead ? "✖ crashed · " + G.score + " · space" : row + " " + G.score, true);
+  $("gamerow").textContent = G.dead ? "✖ crashed · " + G.score : row + "  " + G.score;
+  $("gameinfo").textContent = (G.dead ? "Crashed. " : "") + "Score " + G.score + " · best " + G.best + "." + nextPrize() + " The game is up in the tab title.";
+}
+function gameJump(){ if (gameOn && G.waiting){ G.waiting = false; return; } if (!gameOn || G.dead){ $("gJump").textContent = "Jump (Space)"; startGame(); pointAtTitle(); return; } if (G.jump === 0) G.jump = 3; }
+document.addEventListener("keydown", e => { if (gameOn && e.code === "Space"){ e.preventDefault(); gameJump(); } });
+$("gJump").onclick = gameJump;
+$("gStop").onclick = () => { stopGame(); sayNow("Game over. By choice.", "Your best was " + G.best + "."); };
+
+
+// ---------- the pet layer: coins, mood, shop, rooms, daily ----------
+const ITEMS = [
+  {id:"hat", name:"Party hat", cost:20, kind:"outfit"},
+  {id:"bowtie", name:"Bow tie", cost:30, kind:"outfit"},
+  {id:"shades", name:"Sunglasses", cost:45, kind:"outfit"},
+  {id:"stache", name:"Mustache", cost:60, kind:"outfit"},
+  {id:"gold", name:"Gold hat", cost:90, kind:"outfit"},
+  {id:"monocle", name:"Monocle", cost:120, kind:"outfit"},
+  {id:"crown", name:"Crown", cost:200, kind:"outfit"},
+  {id:"attic", name:"The attic", cost:50, kind:"room", deco:[["🕸",6,8],["📦",8,78],["🕯",88,70],["🕸",90,6]]},
+  {id:"office", name:"An office", cost:80, kind:"room", deco:[["🪴",6,74],["🗄",90,72],["☕",14,86],["🖼",86,18]]},
+  {id:"beach", name:"The beach", cost:120, kind:"room", deco:[["🌴",4,66],["☀",88,8],["🐚",86,84],["⛱",10,84]]},
+  {id:"space", name:"Space", cost:250, kind:"room", deco:[["🪐",8,14],["🌙",88,12],["🛰",84,76],["☄",14,72]]}
+];
+let coins = store.get("coins", 0), owned = store.get("owned", []), worn = store.get("worn", []), room = store.get("room", "");
+if (!Array.isArray(owned)) owned = []; if (!Array.isArray(worn)) worn = [];
+function save(){ if (forgot) return; store.set("coins", coins); store.set("owned", owned); store.set("worn", worn); store.set("room", room); }
+function coinPop(n, why){
+  const el = document.createElement("div"); el.id = "coinpop"; el.textContent = "+" + n + " 🪙";
+  const r = $("coins").getBoundingClientRect(); el.style.left = r.left + "px"; el.style.top = (r.top - 10) + "px";
+  document.body.appendChild(el); requestAnimationFrame(() => { el.style.transform = "translateY(-60px)"; el.style.opacity = 0; });
+  setTimeout(() => el.remove(), 1300);
+  if (why) log("Earned " + n + " coin" + (n === 1 ? "" : "s") + ": " + why + ".");
+}
+function earn(n, why){ if (n <= 0) return; coins += n; save(); renderHud(); if ($("shop").classList.contains("open")) renderShop(); coinPop(n, why); }
+function applyOutfit(){
+  ["hat","bowtie","shades","stache","gold","monocle","crown"].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = worn.includes(id) ? "" : "none"; });
+  document.body.className = document.body.className.replace(/\broom-\S+/g, "").trim();
+  if (room) document.body.classList.add("room-" + room);
+  const it = ITEMS.find(i => i.id === room); $("roomdeco").innerHTML = "";
+  if (it) it.deco.forEach(([e, x, y]) => { const sp = document.createElement("span"); sp.textContent = e; sp.style.left = x + "%"; sp.style.top = y + "%"; $("roomdeco").appendChild(sp); });
+}
+function gift(id, why){ if (!owned.includes(id)) owned.push(id); if (!worn.includes(id)) worn.push(id); save(); applyOutfit(); renderShop(); }
+function renderShop(){
+  $("shopCoins").textContent = coins;
+  ["outfit","room"].forEach(kind => {
+    const box = $(kind === "outfit" ? "shopOutfits" : "shopRooms"); box.innerHTML = "";
+    ITEMS.filter(i => i.kind === kind).forEach(it => {
+      const row = document.createElement("div"); row.className = "item";
+      const has = owned.includes(it.id), on = kind === "room" ? room === it.id : worn.includes(it.id);
+      row.innerHTML = '<span><span class="nm"></span><small></small></span><button type="button"></button>';
+      row.querySelector(".nm").textContent = it.name;
+      row.querySelector("small").textContent = has ? (on ? (kind === "room" ? "I live here now." : "Wearing it.") : "Yours.") : "🪙 " + it.cost;
+      const b = row.querySelector("button");
+      if (has){ b.className = "owned"; b.textContent = on ? (kind === "room" ? "Move out" : "Take off") : (kind === "room" ? "Move in" : "Wear"); }
+      else { b.textContent = "Buy"; b.disabled = coins < it.cost; }
+      b.onclick = () => {
+        if (!has){
+          if (coins < it.cost) return;
+          coins -= it.cost; owned.push(it.id); log("Bought " + it.name + " for " + it.cost + " coins.");
+          if (kind === "room") room = it.id; else worn.push(it.id);
+          setMood("happy", 2500);
+          sayNow(kind === "room" ? "We moved!" : "For me?", kind === "room" ? "I live in " + it.name.toLowerCase() + " now. You paid " + it.cost + " coins." : it.name + ". " + it.cost + " coins. I'll wear it forever, or until you take it off.");
+        } else if (kind === "room"){ room = on ? "" : it.id; }
+        else { worn = on ? worn.filter(w => w !== it.id) : worn.concat(it.id); }
+        save(); applyOutfit(); renderShop(); renderHud();
+      };
+      box.appendChild(row);
+    });
+  });
+}
+$("shopBtn").onclick = () => { renderShop(); $("shop").classList.add("open"); };
+$("shopClose").onclick = () => $("shop").classList.remove("open");
+$("playBtn").onclick = () => { if (!gameOn) startGame(); pointAtTitle(); sayNow("Title game!", "It plays in my tab title. Space to jump. Every point is a coin."); };
+
+// mood: real attention. Goes up while you look at me, down by real time you're away or I'm closed.
+let mood01 = store.get("mood", 60);
+const lastSeenAt = store.get("lastSeen", 0);
+if (lastSeenAt){ const hrs = (Date.now() - lastSeenAt) / 36e5; mood01 = Math.max(10, mood01 - hrs * 2); }
+function renderHud(){
+  $("coins").textContent = coins; $("shopCoins").textContent = coins;
+  const m = Math.round(mood01); $("moodFill").style.width = m + "%"; $("moodPct").textContent = m + "%";
+  $("moodFill").style.background = m < 30 ? "#7cc4f2" : m < 70 ? "#f5c542" : "#5fc27a";
+}
+let coinMin = 0;
+setInterval(() => {
+  if (document.hidden){ mood01 = Math.max(10, mood01 - 2/3600); }        // 2 points an hour, same as when I am closed, never below 10
+  else { mood01 = Math.min(100, mood01 + 0.25); coinMin += 1; if (coinMin >= 60){ coinMin = 0; earn(1, "a minute with me"); } } // +1 point every 4 seconds of company
+  if (!forgot) store.set("mood", mood01);
+  renderHud();
+}, 1000);
+
+// daily: streak bonus, a daily title-game goal, and a free gift on some days
+const today = new Date().toDateString();
+const dayNum = Math.floor((Date.now() - new Date().getTimezoneOffset() * 6e4) / 864e5);
+const goal = 4 + (dayNum % 5);
+function renderDaily(){
+  const done = store.get("goalDay", "") === today;
+  $("daily").textContent = done ? "Today's title-game goal (" + goal + "): done. New goal tomorrow." : "Today's title-game goal: score " + goal + " for 25 coins.";
+}
+function runDaily(){
+  const last = store.get("bonusDay", "");
+  const streakN = store.get("streak", 1);
+  $("streakN").textContent = streakN;
+  if (last !== today){
+    store.set("bonusDay", today);
+    const firstEver = !store.get("welcomed", false); store.set("welcomed", true);
+    const bonus = firstEver ? 25 : Math.min(50, 10 * streakN);
+    setTimeout(() => {
+      earn(bonus, firstEver ? "first visit ever" : "daily visit, day " + streakN + " in a row");
+      if (firstEver){ toast("WELCOME: +25 COINS"); say("Here. 25 coins.", "Spend them in the Shop, on me. Come back tomorrow for more."); return; }
+      toast(streakN > 1 ? "DAY " + streakN + " IN A ROW: +" + bonus + " COINS" : "FIRST VISIT TODAY: +" + bonus + " COINS");
+      if (streakN > 1) say("Day " + streakN + " in a row.", "That's +" + bonus + " coins. Come back tomorrow and it goes up, to a max of 50.");
+      else say("+" + bonus + " coins for visiting today.", "Come back tomorrow for more. Two days in a row pays 20.");
+    }, 2500);
+  }
+  renderDaily();
+}
+
+// coins for finding things (hooked into find/secret below), and for the title game
+const _find = find; find = function(id){ const r = _find(id); if (r) earn(10, "found a way to leave"); return r; };
+const _secret = secret; secret = function(id){ const r = _secret(id); if (r) earn(15, "found a secret"); return r; };
+applyOutfit(); renderShop(); renderHud();
+// day streak: true count of calendar days in a row you've opened me
+(function streak(){
+  const day = new Date().toDateString(), last = store.get("lastDay", ""), y = new Date(Date.now() - 864e5).toDateString();
+  let n = store.get("streak", 0);
+  if (last !== day){ n = last === y ? n + 1 : 1; store.set("streak", n); store.set("lastDay", day); }
+  if (n > 1){ $("honest").textContent = "Day streak: " + n + " days in a row. Nothing here can stop you closing this tab."; }
+})();
+runDaily();
+// ---------- start ----------
+// ---------- secrets ----------
+const SECRETS = {poke:"Poked me", menu:"Right-clicked", sleep:"Let me fall asleep", copy:"Copied my words", all:"Selected everything"};
+let secrets = store.get("secrets", []); if (!Array.isArray(secrets)) secrets = [];
+function renderSecrets(){
+  const n = secrets.length, t = Object.keys(SECRETS).length;
+  const HINTS = {poke:"touch my face", menu:"the other mouse button", sleep:"let me rest", copy:"take my words", all:"all of me at once"};
+  const hint = (typeof viewMs !== "undefined" && viewMs > 90e3) ? " Hints: " + Object.keys(SECRETS).filter(k => !secrets.includes(k)).map(k => HINTS[k]).join(" · ") : "";
+  $("secrets").textContent = (n ? "Secret ways: " + n + " of " + t + " (" + secrets.map(k => SECRETS[k]).join(", ") + ")." : "There are also " + t + " secret ways.") + (n < t ? hint : "");
+}
+function secret(id){ if (secrets.includes(id)) return false; secrets.push(id); if (!forgot) store.set("secrets", secrets); renderSecrets(); log("Secret found: " + SECRETS[id] + "."); return true; }
+$("face").addEventListener("click", () => {
+  const n = nth("poke"); secret("poke");
+  setMood(n > 6 ? "sulk" : "shock", 900); blink();
+  const fw = $("faceWrap"); if (!reduce) fw.animate([{transform:"translateY(0)"},{transform:"translateY(-14px) rotate(-4deg)"},{transform:"translateY(0)"}], {duration:300});
+  sayNow(esc(["Ow. Hi.", "That's my face.", "Still my face.", "You've poked me " + n + " times.", "Poke #" + n + ". I'm counting.", "This isn't leaving. This is just rude.", "Poke #" + n + "."], n), "");
+});
+document.addEventListener("contextmenu", () => {
+  const n = nth("menu"); secret("menu");
+  sayNow(esc(["Looking for “Close tab”?", "Still not in there.", "That menu won't help you."], n), "It's not in that menu. It's on the tab.");
+});
+renderSecrets();
+renderWays();
+placeFake(fake, innerWidth - 170, 64);
+lookAt(innerWidth/2, innerHeight);
+const reloads = store.get("reloads", 0);
+function drawBandages(n){
+  const g = $("bandages"); g.innerHTML = "";
+  const spots = [[70,10,30],[-80,20,-25],[0,-120,10],[90,-110,40],[-95,-115,-35]];
+  for (let i = 0; i < Math.min(n, spots.length); i++){
+    const [x, y, r] = spots[i];
+    g.insertAdjacentHTML("beforeend", `<g transform="translate(${x},${y}) rotate(${r})"><rect class="bandage" x="-22" y="-7" width="44" height="14" rx="5"/><rect class="bandage" x="-7" y="-22" width="14" height="44" rx="5"/></g>`);
+  }
+}
+(function start(){
+  let nav = ""; try { nav = (performance.getEntriesByType("navigation")[0] || {}).type || ""; } catch(e){}
+  const lastSeen = store.get("lastSeen", 0), lastStay = store.get("lastStay", 0);
+  if (nav === "reload" && visit > 1){
+    const n = reloads + 1; store.set("reloads", n); drawBandages(n);
+    attempt(); const first = find("reload"); log("Reloaded. Visit #" + visit + ".");
+    setMood("shock", 2000);
+    sayNow(first ? "Did you just reload me?" : "Reload #" + n + ".", first ? "That's leaving and coming back in one move. I got a bandage." : "Another bandage.");
+    return;
+  }
+  drawBandages(reloads);
+  if (visit > 1 && lastSeen){
+    log("Last visit lasted " + dur(lastStay) + " and ended " + words(Date.now() - lastSeen) + " ago.");
+    setMood("happy", 2500);
+    const away = Date.now() - lastSeen;
+    if (away > 36e5){ $("cobweb").classList.add("on"); setTimeout(() => $("cobweb").classList.remove("on"), 6000); setMood("sulk", 3500); }
+    sayNow(away > 36e5 ? "Oh. It's you." : "You came back!", "You closed me " + words(away) + " ago. I don't remember anything after that. Tabs don't.");
+    say("My mood is " + Math.round(mood01) + "%.", away > 36e5 ? "It drops 2 points for every hour I am closed. Stay a bit and it comes back up." : "Stay and it goes up.");
+    if (found.length) say(found.length + " of 10 found.", "Your list is still here.");
+    return;
+  }
+  say("Hi. I'm a tab. Please don't close me.", "You'll try anyway. There are 10 ways I can notice. Find them.");
+})();
+})();
+</script>
+</body>
+</html>
