@@ -79,7 +79,7 @@ header b{color:var(--ink);font-weight:600}
 .key small{position:absolute;bottom:-34px;left:50%;transform:translateX(-50%);font:600 12px ui-monospace,monospace;white-space:nowrap;color:var(--muted)}
 .key.pop{animation:pop .35s cubic-bezier(.2,2,.4,1)}
 @keyframes pop{from{transform:scale(0)}}
-.key.run{transition:transform 1.4s cubic-bezier(.6,0,.9,.5);transform:translateX(120vw) rotate(25deg)}
+.key.run{transition:transform 1.4s cubic-bezier(.6,0,.9,.5);transform:translateX(-120vw) rotate(-25deg) !important}
 #veil{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;display:none;align-items:center;justify-content:center;padding:16px}
 #veil.on{display:flex}
 .dlg{background:var(--card);border:2px solid var(--ink);border-radius:8px;max-width:440px;width:100%;padding:20px 20px 16px;box-shadow:0 12px 0 rgba(0,0,0,.35);transition:transform .3s}
@@ -128,7 +128,6 @@ header b{color:var(--ink);font-weight:600}
   <div class="tilt">
     <header class="mono piece">
       <span id="tabmirror"><img id="mirrorIcon" alt=""><span id="mirrorText">Don't Close This Tab</span><em id="tabhint">← your real tab title says this too ↑</em></span>
-      <span>with me <b id="sTime">0s</b> · left <b id="sLeft">0</b> · visit <b id="sVisit">1</b></span>
     </header>
 
     <div id="faceWrap" class="piece">
@@ -160,7 +159,7 @@ header b{color:var(--ink);font-weight:600}
     <div id="ways" class="piece"></div>
     <div id="secrets" class="mono piece"></div>
     <div id="bottom" class="mono piece">
-      <span id="honest">Nothing here can stop you closing this tab.</span>
+      <span><span>with me <b id="sTime">0s</b> · left <b id="sLeft">0</b> · visit <b id="sVisit">1</b></span><br><span id="honest">Nothing here can stop you closing this tab.</span></span>
       <span><button id="logBtn" type="button">Departure log (0)</button> <button id="forget" type="button">Forget me</button></span>
     </div>
   </div>
@@ -518,7 +517,14 @@ let lastKey = {};
 function keycap(label, note, run){
   const k = document.createElement("div"); k.className = "key pop";
   k.innerHTML = label + "<small></small>"; k.querySelector("small").textContent = note;
-  k.style.left = rnd(40, Math.max(60, innerWidth - 160)) + "px"; k.style.top = rnd(innerHeight*0.25, innerHeight*0.55) + "px";
+  // keep it clear of the face and every line of text
+  const fr = $("faceWrap").getBoundingClientRect();
+  const textBottom = Math.max($("sub").getBoundingClientRect().bottom, $("replay").classList.contains("on") ? $("replay").getBoundingClientRect().bottom : 0);
+  const waysTop = $("ways").getBoundingClientRect().top;
+  if (fr.left > 170){ k.style.left = (fr.left - 150) + "px"; k.style.top = (fr.top + fr.height * 0.25) + "px"; }
+  else if (innerWidth - fr.right > 170){ k.style.left = (fr.right + 40) + "px"; k.style.top = (fr.top + fr.height * 0.25) + "px"; }
+  else if (waysTop - textBottom > 170){ k.style.left = (innerWidth/2 - 55) + "px"; k.style.top = (textBottom + 20) + "px"; }
+  else { k.style.left = "12px"; k.style.top = Math.max(8, waysTop - 160) + "px"; k.style.transform = "scale(.6)"; }
   document.body.appendChild(k);
   if (run) setTimeout(() => k.classList.add("run"), 900);
   setTimeout(() => k.remove(), run ? 2600 : 2800);
@@ -598,13 +604,26 @@ function placeFake(el, x, y){
   el.style.right = "auto";
 }
 function keepFakeOnScreen(){ const r = fake.getBoundingClientRect(); placeFake(fake, r.left, r.top); }
+function covered(x, y, w, h){ // would a box here sit on the face or any line of text?
+  return ["bubble", "sub", "replay", "faceWrap", "tabmirror"].some(id => {
+    const el = $(id); if (!el) return false; const r = el.getBoundingClientRect();
+    if (id === "bubble" || id === "sub" || id === "replay"){ // only the text itself, not the empty width
+      const range = document.createRange(); range.selectNodeContents(el); const t = range.getBoundingClientRect();
+      if (!t.width) return false;
+      return !(x + w < t.left - 10 || x > t.right + 10 || y + h < t.top - 10 || y > t.bottom + 10);
+    }
+    return !(x + w < r.left - 8 || x > r.right + 8 || y + h < r.top - 8 || y > r.bottom + 8);
+  });
+}
 function farFrom(mx, my){
-  let best = [20,20], bd = -1;
-  for (let i = 0; i < 14; i++){
-    const x = rnd(8, innerWidth - 180), y = rnd(8, innerHeight - 60), d = Math.hypot(x - mx, y - my);
-    if (d > bd){ bd = d; best = [x, y]; }
+  const w = 190, h = 44;
+  let best = null, bd = -1, fallback = [20, 20], fd = -1;
+  for (let i = 0; i < 60; i++){
+    const x = rnd(8, Math.max(9, innerWidth - w - 8)), y = rnd(8, Math.max(9, innerHeight - h - 8)), d = Math.hypot(x - mx, y - my);
+    if (d > fd){ fd = d; fallback = [x, y]; }
+    if (!covered(x, y, w, h) && d > bd){ bd = d; best = [x, y]; }
   }
-  return best;
+  return best || fallback;
 }
 function dodgeCheck(mx, my, force){
   if (tired || $("veil").classList.contains("on")) return;
@@ -644,7 +663,7 @@ function dodgeCheck(mx, my, force){
     sayNow("It's hiding behind me.", "I didn't agree to this.");
   }
   if (trick === "tired"){
-    tired = true; placeFake(fake, innerWidth * 0.68, innerHeight * 0.42); fake.classList.add("tired"); fake.textContent = "Close tab ✕ (tired)";
+    tired = true; const ts = farFrom(innerWidth/2, innerHeight/2); placeFake(fake, ts[0], ts[1]); fake.classList.add("tired"); fake.textContent = "Close tab ✕ (tired)";
     sayNow("It's exhausted.", "It ran " + dodges + " times. You can catch it now.");
   }
 }
