@@ -555,7 +555,7 @@ document.addEventListener("keydown", e => {
   const now = Date.now();
   if ((e.ctrlKey || e.metaKey) && (e.key === "a" || e.key === "A")){ secret("all"); setMood("shock", 1500); sayNow("All of me? At once?", "You selected everything on the page."); }
   if (e.key === "Escape"){
-    if ($("veil").classList.contains("on")){ $("dNo").click(); return; }
+    if ($("veil").classList.contains("on")){ find("esc"); $("dNo").click(); return; }
     if (now - (lastKey.esc||0) < 2500) return; lastKey.esc = now; attempt();
     const first = find("esc"); log("Pressed Escape.");
     keycap("Esc", "escaping", true); setMood("shock", 1500);
@@ -706,7 +706,7 @@ fake.addEventListener("click", e => {
 const STEPS = [
   {q:"Close this tab?", d:"", yes:"Close", no:"Stay"},
   {q:"Are you sure?", d:"", yes:"Yes", no:"No, stay"},
-  {q:"Are you sure you're sure?", d:"This tab has been with you for {t}.", yes:"Yes", no:"Stay"},
+  {q:"Are you sure you're sure?", d:"This tab has been with you for {t}. (The buttons swapped. Read carefully.)", yes:"Yes", no:"Stay"},
   {q:"It has logged {n} of your attempts.", d:"It took every one personally.", yes:"Still yes", no:"Stay"},
   {q:"Okay. Last chance.", d:"Press Close and see what happens.", yes:"Close", no:"Stay"}
 ];
@@ -718,10 +718,19 @@ function showStep(){
   $("dq").textContent = fill(s.q); $("dd").textContent = fill(s.d);
   $("dYes").textContent = s.yes; $("dNo").textContent = s.no;
   $("dYes").style.fontSize = Math.max(9, 15 - step*1.6) + "px"; $("dYes").style.padding = Math.max(3, 9 - step*1.5) + "px " + Math.max(6, 16 - step*2.5) + "px";
+  const row = document.querySelector(".dlg .row");
+  if (step === 2) row.insertBefore($("dNo"), $("dYes")); else row.insertBefore($("dYes"), $("dNo"));
+  $("dYes").dataset.shy = step === 3 ? "1" : "";
+  $("dYes").style.transform = "";
   $("dNo").style.fontSize = (15 + step*3) + "px"; $("dNo").style.padding = (9 + step*2) + "px " + (16 + step*4) + "px";
 }
 function closeDialog(){ $("veil").classList.remove("on"); document.querySelector(".dlg").classList.remove("crack"); moodLock = 0; settle(); }
 $("dNo").onclick = () => { log("Chose to stay, at question " + (step + 1) + "."); closeDialog(); setMood("happy", 2500); sayNow("You stayed!", "At question " + (step + 1) + " of " + STEPS.length + ". I'll remember this. Until you close me."); };
+$("dYes").addEventListener("mouseenter", () => {
+  if ($("dYes").dataset.shy !== "1") return;
+  $("dYes").dataset.shy = "done"; $("dYes").style.transform = "translate(" + (rnd(0,1) < .5 ? -140 : -60) + "px, 46px)";
+  $("dd").textContent = "It flinched. It's still a button. You can still press it.";
+});
 $("dYes").onclick = () => {
   if (step < STEPS.length - 1){ step++; showStep(); return; }
   if (closing) return; closing = true;
@@ -745,7 +754,7 @@ $("dYes").onclick = () => {
       }
       setTimeout(() => { fw.classList.remove("flyaway"); setMood("shock", 2500);
         say("That button was never real.", "The X on the tab always was. Use it whenever.");
-        closing = false; }, 1700);
+        closing = false; }, 3600);
     }, 300);
     tired = true;
   }, 650);
