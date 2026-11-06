@@ -27,7 +27,7 @@ body{
 body.elsewhere{filter:grayscale(1) brightness(.85)}
 .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
 #app{position:relative;min-height:100%;display:flex;flex-direction:column;align-items:center;padding:18px 16px 12px;perspective:900px}
-#app.lookup .tilt{transform:rotateX(12deg) translateY(-8px)}
+#app.lookup .tilt{transform:rotateX(6deg) translateY(-6px)}
 .tilt{transition:transform .5s cubic-bezier(.3,1.4,.5,1);transform-origin:50% 0;display:flex;flex-direction:column;align-items:center;width:100%;flex:1}
 header{width:100%;max-width:820px;display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
 header b{color:var(--ink);font-weight:600}
@@ -64,8 +64,8 @@ header b{color:var(--ink);font-weight:600}
 #bottom{width:100%;max-width:820px;display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;font-size:12px;color:var(--muted)}
 #bottom button{background:none;border:1px solid var(--line);color:var(--muted);border-radius:4px;padding:4px 9px;font:inherit;cursor:pointer}
 #bottom button:hover{color:var(--ink);border-color:var(--muted)}
-#drawer{position:fixed;right:0;top:0;bottom:0;width:min(380px,92vw);background:var(--card);border-left:1px solid var(--line);transform:translateX(105%);transition:transform .3s;z-index:30;padding:16px;overflow:auto;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace}
-#drawer.open{transform:none}
+#drawer{position:fixed;right:0;top:0;bottom:0;width:min(380px,92vw);background:var(--card);border-left:1px solid var(--line);transform:translateX(105%);visibility:hidden;transition:transform .3s,visibility 0s .3s;z-index:30;padding:16px;overflow:auto;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace}
+#drawer.open{transform:none;visibility:visible;transition:transform .3s}
 #drawer h2{font-size:12px;letter-spacing:.16em;text-transform:uppercase;margin:0 0 10px;color:var(--muted)}
 #log{list-style:none;margin:0;padding:0}
 #log li{padding:6px 0;border-bottom:1px dashed var(--line)}
@@ -122,14 +122,14 @@ header b{color:var(--ink);font-weight:600}
 @keyframes flyaway{35%{transform:scale(.25) translateY(-60vh)}50%{transform:scale(.25) translateY(-64vh) rotate(25deg)}100%{transform:none}}
 .walkoff{transition:transform 2.2s ease-in !important;transform:translateX(120vw) rotate(8deg) !important}
 #next{font-size:12px;color:var(--muted);text-align:center;margin-top:4px;min-height:1.2em}
-#toast{position:fixed;left:50%;top:58px;transform:translate(-50%,-200%);background:var(--red);color:#fff;font:700 13px ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:8px 14px;border-radius:6px;z-index:50;transition:transform .45s cubic-bezier(.2,1.6,.4,1)}
-#toast.on{transform:translate(-50%,0)}
+#toast{position:fixed;left:50%;bottom:18px;transform:translate(-50%,220%);visibility:hidden;background:var(--red);color:#fff;font:700 13px ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:8px 14px;border-radius:6px;z-index:50;transition:transform .45s cubic-bezier(.2,1.6,.4,1)}
+#toast.on{transform:translate(-50%,0);visibility:visible}
 #paint{position:fixed;inset:0;z-index:12;pointer-events:none;opacity:0;transition:opacity 1s}
 #paint.on{opacity:1}
 #frame{position:fixed;z-index:13;pointer-events:none;border:10px solid #8a5a2b;box-shadow:inset 0 0 0 3px #d9a85f,0 10px 30px rgba(0,0,0,.5);display:none}
 #frame.on{display:block}
 #frame .plaque{position:absolute;left:50%;bottom:-38px;transform:translateX(-50%);background:#d9a85f;color:#2a1d0e;font:600 12px ui-monospace,monospace;padding:3px 10px;white-space:nowrap;border-radius:2px}
-#gamerow{font:700 clamp(18px,3vw,26px) ui-monospace,Menlo,monospace;color:var(--ink);letter-spacing:.12em;display:block;margin-bottom:2px}
+#gamerow{font:700 clamp(18px,3vw,26px) ui-monospace,Menlo,monospace;color:var(--ink);letter-spacing:.12em;display:block;margin-bottom:8px}
 #gamebox{display:none;text-align:center;margin-top:8px;font:13px ui-monospace,Menlo,monospace;color:var(--muted)}
 #gamebox.on{display:block}
 #gamebox button{font:600 13px ui-monospace,monospace;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:5px;padding:5px 10px;cursor:pointer;margin:0 4px}
@@ -143,23 +143,26 @@ header b{color:var(--ink);font-weight:600}
 .moodbar{display:inline-block;width:70px;height:9px;border:1px solid var(--muted);border-radius:5px;overflow:hidden}
 .moodbar i{display:block;height:100%;width:50%;background:var(--red);transition:width .6s}
 #coinpop{position:fixed;z-index:60;font:800 26px ui-monospace,monospace;color:#f5c542;background:#1d1b18;border:2px solid #f5c542;border-radius:8px;padding:2px 10px;pointer-events:none;transition:transform 1.2s ease-out,opacity 1.2s;text-shadow:0 2px 0 #000}
-#shop{position:fixed;left:0;top:0;bottom:0;width:min(400px,94vw);background:var(--card);border-right:1px solid var(--line);transform:translateX(-105%);transition:transform .3s;z-index:31;padding:16px;overflow:auto;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace}
-#shop.open{transform:none}
+#shop{position:fixed;left:0;top:0;bottom:0;width:min(400px,94vw);background:var(--card);border-right:1px solid var(--line);transform:translateX(-105%);visibility:hidden;transition:transform .3s,visibility 0s .3s;z-index:31;padding:16px;overflow:auto;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace}
+#shop.open{transform:none;visibility:visible;transition:transform .3s}
 #shop h2{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px}
 .item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line)}
 .item button{font:600 12px ui-monospace,monospace;border:1px solid var(--ink);background:var(--ink);color:var(--card);border-radius:5px;padding:4px 10px;cursor:pointer;white-space:nowrap}
 .item button.owned{background:var(--card);color:var(--ink)}
 .item button:disabled{opacity:.4;cursor:default}
 .item small{display:block;color:var(--muted)}
-#daily{font-size:13px;color:var(--ink);text-align:center;margin-top:6px;font-weight:600}
+#daily{font-size:13px;color:var(--ink);text-align:center;margin:6px auto 0;font-weight:600;max-width:min(900px,94vw)}
 body.room-attic{--bg:#15140f;--ink:#efe9dd;--muted:#a39b8c;--line:#3a362d;--card:#211f19;--tab:#2a2720;--tabline:#efe9dd;background-color:#2a2116}
 body.room-beach{--ink:#1d1b18;--muted:#5d5548;--line:#c9bfa9;--card:#fffaf0;--tab:#fffdf8;--tabline:#1d1b18;background-color:#f2dfb0;--bg:#f2dfb0}
 body.room-space{--bg:#15140f;--ink:#efe9dd;--muted:#a39b8c;--line:#3a362d;--card:#211f19;--tab:#2a2720;--tabline:#efe9dd;background-color:#07081a;background-image:radial-gradient(1px 1px at 20% 30%,#fff,transparent),radial-gradient(1px 1px at 70% 20%,#fff,transparent),radial-gradient(2px 2px at 40% 70%,#fff,transparent),radial-gradient(1px 1px at 85% 60%,#fff,transparent),radial-gradient(1px 1px at 10% 85%,#fff,transparent),radial-gradient(1.5px 1.5px at 55% 45%,#fff,transparent)}
 body.room-office{--ink:#1d1b18;--muted:#5d5548;--line:#c9bfa9;--card:#fffaf0;--tab:#fffdf8;--tabline:#1d1b18;background-color:#d9dde2;--bg:#d9dde2}
 #roomdeco{position:fixed;inset:0;pointer-events:none;z-index:-1;font-size:46px}
 #roomdeco span{position:absolute;opacity:.85}
-#plant{position:absolute;left:-18%;bottom:2%;font-size:clamp(28px,4vw,44px)}
-#bonusways{font-size:12px;color:var(--muted);text-align:center;margin-top:4px}
+#plant{position:absolute;left:-18%;bottom:2%;font-size:clamp(28px,4vw,44px);cursor:pointer;user-select:none}
+#bonusways{font-size:12px;color:var(--muted);text-align:center;margin:4px auto 0;max-width:min(820px,94vw)}
+#bonusways span{display:block}
+#bubble.old,#sub.old{opacity:.45;transition:opacity 1.5s}
+#moodHelp{background:none;border:0;color:var(--muted);font:inherit;cursor:pointer;padding:0;text-decoration:underline dotted}
 </style>
 </head>
 <body>
@@ -206,7 +209,7 @@ body.room-office{--ink:#1d1b18;--muted:#5d5548;--line:#c9bfa9;--card:#fffaf0;--t
     <div id="hud" class="mono">
       <span title="Coins">🪙 <b id="coins">0</b></span>
       <span title="Days in a row">🔥 <b id="streakN">1</b> <span id="streakWord">day</span></span>
-      <span>mood</span><span class="moodbar" title="Mood: how much attention I've had lately"><i id="moodFill"></i></span><b id="moodPct">50%</b>
+      <button id="moodHelp" type="button" title="What is mood?">mood</button><span class="moodbar" title="Goes up while you're here, down 2 an hour while you're away. At 70% or more, I pay 2 coins a minute instead of 1."><i id="moodFill"></i></span><b id="moodPct">50%</b>
       <button id="shopBtn" type="button">Shop</button>
       <button id="playBtn" type="button">Title game</button>
       <button id="stareBtn" type="button">Staring contest</button>
@@ -216,8 +219,8 @@ body.room-office{--ink:#1d1b18;--muted:#5d5548;--line:#c9bfa9;--card:#fffaf0;--t
     <div id="next" class="mono piece"></div>
     <div id="daily" class="mono piece"></div>
     <div id="bottom" class="mono piece">
-      <span><span>with me <b id="sTime">0s</b> · left <b id="sLeft">0</b> · visit <b id="sVisit">1</b></span><br><span id="honest">Nothing here can stop you closing this tab.</span></span>
-      <span><button id="logBtn" type="button">Departure log (0)</button> <button id="forget" type="button">Forget me</button></span>
+      <span><span>open <b id="sTime">0s</b> · left <b id="sLeft">0</b> · visit <b id="sVisit">1</b></span><br><span id="honest">Nothing here can stop you closing this tab.</span></span>
+      <span><button id="logBtn" type="button">Diary (0)</button> <button id="forget" type="button">Forget me</button></span>
     </div>
   </div>
 </div>
@@ -236,13 +239,13 @@ body.room-office{--ink:#1d1b18;--muted:#5d5548;--line:#c9bfa9;--card:#fffaf0;--t
 
 <aside id="shop" aria-label="Shop">
   <h2 style="margin-top:0">Shop · 🪙 <span id="shopCoins">0</span> <button id="shopClose" type="button" style="float:right">close</button></h2>
-  <div style="color:var(--muted)">Coins come from visiting, finding leaving tricks, and the title game. Things you buy are kept in this browser only.</div>
+  <div style="color:var(--muted)">Coins come from: visiting each day (more for a streak), daily jobs, finding ways and secrets, a won staring contest or a full "are you sure" (once a day each), the title game (up to 60 a day), and 1 a minute while you look at me (2 when my mood is 70%+). Things you buy are kept in this browser only.</div>
   <h2>Outfits</h2><div id="shopOutfits"></div>
   <h2>Rooms</h2><div id="shopRooms"></div>
 </aside>
 <div id="roomdeco" aria-hidden="true"></div>
-<aside id="drawer" aria-label="Departure log">
-  <h2>Departure log <button id="logClose" type="button" style="float:right">close</button></h2>
+<aside id="drawer" aria-label="Diary">
+  <h2>My diary <button id="logClose" type="button" style="float:right">close</button></h2>
   <ol id="log"></ol>
 </aside>
 
@@ -313,7 +316,8 @@ function pump(){
   const [t, s] = q.shift();
   $("bubble").textContent = t; $("sub").textContent = s;
   if (window.__rpAt && Date.now() - window.__rpAt > 3000){ $("replay").classList.remove("on"); window.__rpAt = 0; }
-  shownAt = Date.now();
+  shownAt = Date.now(); $("bubble").classList.remove("old"); $("sub").classList.remove("old");
+  clearTimeout(pump.old); pump.old = setTimeout(() => { $("bubble").classList.add("old"); $("sub").classList.add("old"); }, 14000);
   const hold = Math.max(2600, (t.length + s.length) * 62);
   holdTimer = setTimeout(() => { busy = false; pump(); }, hold);
 }
@@ -411,12 +415,13 @@ function log(text){
   const when = new Date().toLocaleString([], {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit", second:"2-digit"});
   addLogLi(totalLog(), when, text);
   if (!forgot){ oldLog.push([totalLog(), when, text]); while (oldLog.length > 80) oldLog.shift(); store.set("log", oldLog); store.set("totalLog", totalLog()); }
-  $("logBtn").textContent = "Departure log (" + totalLog() + ")";
+  $("logBtn").textContent = "Diary (" + totalLog() + ")";
   if (!document.hidden && !titleBit) setTitle("(" + totalLog() + ") Don't Close This Tab");
 }
 function attempt(){ attempts++; settle(); }
 $("logBtn").onclick = () => $("drawer").classList.add("open");
-$("logClose").onclick = () => $("drawer").classList.remove("open");
+$("logClose").onclick = () => { $("drawer").classList.remove("open"); quietUntil = Date.now() + 1200; };
+let quietUntil = 0;
 
 // ---------- stats ----------
 const t0 = Date.now();
@@ -616,6 +621,9 @@ document.addEventListener("keydown", e => {
     sayNow(esc(["Escape escaped.", "It left without you again.", "Escape has left 3 times. You haven't left once.", "Escape is having a better day than you.", "Escape sends its regards."], n), "You're still here, though.");
   }
   if (e.key === "Control" || e.key === "Meta"){ modAlone = true; return; }
+  if (e.key === "F4" && e.altKey){ sayNow("Alt+F4.", "That closes the whole window, not just me. Bold."); }
+  else if (e.key === "F4" && !(e.ctrlKey || e.metaKey) && now - (lastKey.f4||0) > 4000){ lastKey.f4 = now; sayNow("Just F4?", "It needs Alt with it. Please don't tell it."); }
+  else if ((e.key === "Delete" || e.key === "Backspace") && now - (lastKey.del||0) > 4000 && !/INPUT|TEXTAREA/.test((e.target||{}).tagName||"")){ lastKey.del = now; sayNow("Delete?", "I'm not a file. I'm a tab. Different thing."); }
   modAlone = false;
 });
 let modAlone = false;
@@ -711,6 +719,7 @@ function farFrom(mx, my){
 }
 function dodgeCheck(mx, my, force){
   if (tired || $("veil").classList.contains("on")) return;
+  if (!force && (Date.now() < quietUntil || $("drawer").classList.contains("open") || $("shop").classList.contains("open"))) return;
   const r = fake.getBoundingClientRect();
   const reach = 46 + Math.max(r.width, r.height) / 2;
   if (!force && Math.hypot(mx - (r.left + r.width/2), my - (r.top + r.height/2)) > reach) return;
@@ -808,12 +817,12 @@ $("dYes").onclick = () => {
     setTimeout(() => {
       const fw = $("faceWrap");
       if (refuses){
-        log("Pressed Close at the last question. I called window.close(). I'm still open, so the browser said no.");
+        log("Pressed Close at the last question. I called window.close(). I'm still open, so the browser said no."); job("dialog"); if (once("dialog", 15)) setTimeout(() => toast("SAT THROUGH ALL 5: +15"), 1200);
         setMood("panic", 1700);
         fw.classList.remove("flyaway"); void fw.offsetWidth; if (!reduce) fw.classList.add("flyaway");
         sayNow("I tried to close myself!", "Really. I called window.close(). The browser said no.");
       } else {
-        log("Pressed Close at the last question. I didn't call window.close(). In this tab it might work.");
+        log("Pressed Close at the last question. I didn't call window.close(). In this tab it might work."); job("dialog"); if (once("dialog", 15)) setTimeout(() => toast("SAT THROUGH ALL 5: +15"), 1200);
         setMood("nervous", 2500);
         sayNow("I almost tried to close myself.", "In a fresh tab like this one, window.close() might actually work. I'm not ready.");
       }
@@ -844,7 +853,7 @@ function finale(){
     titleShow(["ok", "ok you win", "🏳 you may leave"], 1800, () => setTitle("🏳 you may leave"));
   }, 3400);
   setTimeout(() => {
-    $("certStats").textContent = (visit > 1 ? "Over " + visit + " visits: " : "") + dur(total) + " with me, " + logs + " entr" + (logs === 1 ? "y" : "ies") + " in the departure log.";
+    $("certStats").textContent = (visit > 1 ? "Over " + visit + " visits: " : "") + dur(total) + " with me, " + logs + " entr" + (logs === 1 ? "y" : "ies") + " in my diary.";
     $("finale").classList.add("on");
     requestAnimationFrame(() => requestAnimationFrame(() => $("finale").classList.add("slam")));
     if (!reduce) document.body.animate([{transform:"translateY(0)"},{transform:"translateY(10px)"},{transform:"translateY(0)"}], {duration:200, delay:250});
@@ -889,7 +898,7 @@ $("forget").onclick = () => {
 let forgot = false;
 const prevTotal = store.get("totalMs", 0), prevLog = store.get("totalLog", 0);
 function heartbeat(){ if (forgot) return; store.set("lastSeen", Date.now()); store.set("lastStay", Date.now() - t0); store.set("totalMs", prevTotal + Date.now() - t0); store.set("totalLog", prevLog + incidents); }
-setInterval(heartbeat, 2000); addEventListener("pagehide", heartbeat);
+setInterval(heartbeat, 2000); addEventListener("pagehide", () => { heartbeat(); try { sessionStorage.setItem("dcttpet_unload", Date.now()); } catch(e){} });
 
 
 // ---------- the longer you stay ----------
@@ -911,8 +920,9 @@ document.addEventListener("mouseout", e => { if (!e.relatedTarget && !e.toElemen
 
 const STAGES = [
   {at: 60e3, name:"a hat", run(){
-    gift("hat"); setMood("happy", 3000); toast("UNLOCKED AT 1 MINUTE: A FREE HAT");
-    sayNow("You've stayed a whole minute.", "I'm wearing a hat now. This is a celebration.");
+    const headOn = worn.find(w => SLOTS[w] === "head" && w !== "hat"); setMood("happy", 3000); toast("UNLOCKED AT 1 MINUTE: A PARTY HAT");
+    if (headOn){ if (!owned.includes("hat")) owned.push("hat"); save(); renderShop(); sayNow("You've stayed a whole minute.", "You get a party hat. It's in the Shop. I'm keeping the " + ITEMS.find(i => i.id === headOn).name.toLowerCase() + " on."); }
+    else { gift("hat"); sayNow("You've stayed a whole minute.", "I'm wearing a party hat now. This is a celebration."); }
     log("Stayed 1 minute in view. Put on a hat.");
   }},
   {at: 120e3, name:"a painting", run(){
@@ -936,7 +946,8 @@ const STAGES = [
       if (i < pts.length) requestAnimationFrame(step);
     };
     step();
-    sayNow("I painted where your mouse went.", "All " + Math.round(travelled).toLocaleString() + " pixels of it, in the order you went.");
+    if (travelled < 300) sayNow("I tried to paint where your mouse went.", "You barely moved it: " + Math.round(travelled) + " pixels. So it's a very minimal piece.");
+    else sayNow("I painted where your mouse went.", "All " + Math.round(travelled).toLocaleString() + " pixels of it, in the order you went.");
     say("Gorgeous.", topExits ? "The lines at the top are the " + topExits + (topExits === 1 ? " time" : " times") + " you went for the X." : "This visit, you haven't gone for the X once. I'm touched.");
     log("Stayed 2 minutes. Painted your cursor's path: " + Math.round(travelled) + " px.");
     setTimeout(() => { c.classList.remove("on"); f.classList.remove("on"); }, 11000);
@@ -986,7 +997,7 @@ const IMPROV = [
   () => { const w = Math.round(travelled / innerWidth * 10) / 10; sayNow("Fun fact.", "Your mouse has crossed " + w + " screen widths since you got here."); },
   () => { sayNow("Can I ask you something?", "You've clicked " + clicks + " times on this page. What were you hoping for?"); },
   () => { $("faceWrap").classList.remove("squish"); void $("faceWrap").offsetWidth; $("faceWrap").classList.add("squish"); sayNow("Stretching.", "This visit, I've been open for " + dur(Date.now() - t0) + "."); },
-  () => { sayNow("Your departure log has " + totalLog() + " entries.", "I'd frame it, but I already framed your mouse."); }
+  () => { sayNow("My diary has " + totalLog() + " entries.", "I'd frame it, but I already framed your mouse."); }
 ];
 let improvOrder = [], stare = 0;
 function improvise(){
@@ -998,16 +1009,19 @@ addEventListener("mousemove", () => {
   const held = Date.now() - stare; stare = 0;
   if (held < 8000){ setMood("happy", 2000); sayNow("You moved!", "After " + secs(held) + ". I win."); log("Lost a staring contest after " + secs(held) + "."); }
 }, {passive:true});
-setInterval(() => { if (stare && Date.now() - stare >= 8000){ stare = 0; blink(); setMood("sulk", 2000); sayNow("Fine. You win.", "8 seconds without moving. I blinked."); log("Won a staring contest."); job("stare"); } }, 300);
+setInterval(() => { if (stare && Date.now() - stare >= 8000){ stare = 0; blink(); setMood("sulk", 2000); const paid = once("stare", 15); sayNow("Fine. You win.", "8 seconds without moving. I blinked." + (paid ? " +15 coins." : " (Coins for this: once a day. Already paid today.)")); log("Won a staring contest."); job("stare"); } }, 300);
 
 // ---------- the game in the tab title ----------
 const PRIZES = [{at:10, name:"sunglasses", el:"shades"}, {at:25, name:"a gold hat", el:"gold"}, {at:45, name:"a crown", el:"crown"}, {at:70, name:"a monocle", el:"monocle"}];
 function p_at(p){ return p.at + "+"; }
-function wearPrizes(){ const b = store.get("best", 0); PRIZES.forEach(p => { if (b >= p.at && typeof gift === "function") gift(p.el); }); }
-function nextPrize(){ const b = store.get("best", 0); const p = PRIZES.find(p => b < p.at); return p ? " Next prize at " + p.at + ": " + p.name + "." : " You've won every prize."; }
+let prizesWon = store.get("prizesWon", -1); if (prizesWon < 0){ prizesWon = PRIZES.filter(p => store.get("best", 0) >= p.at).length; store.set("prizesWon", prizesWon); }
+function wearPrizes(){}
+function nextPrize(){ const p = PRIZES[prizesWon]; if (!p) return " You've won every prize."; return store.get("prizeDay", "") === new Date().toDateString() ? " Next prize (" + p.name + ", at " + p.at + ") opens tomorrow: one prize a day." : " Next prize at " + p.at + " in one run: " + p.name + "."; }
+function checkPrize(score){ const p = PRIZES[prizesWon], d = new Date().toDateString(); if (!p || score < p.at || store.get("prizeDay", "") === d) return null; prizesWon++; store.set("prizesWon", prizesWon); store.set("prizeDay", d); if (typeof gift === "function") gift(p.el); return p; }
+function earnGame(n){ if (n <= 0) return; const d = new Date().toDateString(); let g = store.get("gameCoins", null); if (!g || g.day !== d) g = {day: d, n: 0}; const pay = Math.min(n, 60 - g.n); if (pay <= 0) return; g.n += pay; store.set("gameCoins", g); earn(pay, ""); if (g.n >= 60) toast("TITLE GAME: 60 COINS TODAY, THAT'S THE DAILY MAX"); }
 const G = {len:14, x:2, obs:[], jump:0, score:0, tick:null, best:store.get("best", 0), dead:false};
 function startGame(){
-  G.runStartBest = G.best; gameOn = true; G.obs = []; G.hi = []; G.jump = 0; G.calm = 8; G.paid = 0; G.score = 0; G.dead = false; G.waiting = true; $("gamebox").classList.add("on");
+  G.runStartBest = G.best; G.prize = null; gameOn = true; G.obs = []; G.hi = []; G.jump = 0; G.calm = 8; G.paid = 0; G.score = 0; G.dead = false; G.waiting = true; $("gamebox").classList.add("on");
   G.speed = 270; clearInterval(G.tick); G.tick = setInterval(gameStep, G.speed); gameStep();
 }
 function stopGame(){ gameOn = false; clearInterval(G.tick); $("gamebox").classList.remove("on"); setTitle("(" + totalLog() + ") Don't Close This Tab"); }
@@ -1027,17 +1041,17 @@ function gameStep(){
     const hitHi = G.hi.includes(G.x) && G.jump > 0, passHi = G.hi.includes(G.x) && G.jump === 0;
     if ((G.obs.includes(G.x) && G.jump === 0) || hitHi){
       G.dead = true; const before = G.runStartBest; G.best = Math.max(G.best, G.score); store.set("best", G.best);
-      const prize = PRIZES.find(p => before < p.at && G.best >= p.at);
-      earn(G.score - G.paid, "");
-      if (prize){ setTimeout(() => sayNow("You won me " + prize.name + "!", "For scoring " + p_at(prize) + " in the title game. I'm wearing it. You can take it off in the Shop."), 2700); }
-      if (false){ toast("TITLE GAME PRIZE: " + prize.name.toUpperCase()); setTimeout(() => sayNow("You won me " + prize.name + "!", "For scoring " + p_at(prize) + " in the title game. I'm wearing it."), 2700); }
+      const prize = G.prize; G.prize = null;
+      earnGame(G.score - G.paid);
+      if (prize){ setTimeout(() => sayNow("You won me " + prize.name + "!", "For scoring " + prize.at + " in one title-game run. I'm wearing it. You can take it off in the Shop. Next prize: tomorrow."), 2700); }
 
       sayNow(G.score > before && G.score > 0 ? "New best: " + G.score + "!" : "You crashed.", "Score " + G.score + ". Best " + G.best + ". Space to go again.");
     } else if (G.obs.includes(G.x) || passHi) {
       G.score++; dayStat("best", G.score);
-      if (G.score > G.best){ const before = G.best; G.best = G.score; store.set("best", G.best); const prize = PRIZES.find(p => before < p.at && G.best >= p.at); if (prize){ wearPrizes(); toast("TITLE GAME PRIZE: " + prize.name.toUpperCase()); } }
+      if (G.score > G.best){ G.best = G.score; store.set("best", G.best); }
+      const prize = checkPrize(G.score); if (prize){ G.prize = prize; toast("TITLE GAME PRIZE: " + prize.name.toUpperCase()); }
       job("run", G.score);
-      if (G.score % 5 === 0){ earn(G.score - G.paid, ""); G.paid = G.score; if (G.speed > 90){ G.speed -= G.speed > 150 ? 20 : 10; clearInterval(G.tick); G.tick = setInterval(gameStep, G.speed); toast("FASTER"); } }
+      if (G.score % 5 === 0){ earnGame(G.score - G.paid); G.paid = G.score; if (G.speed > 90){ G.speed -= G.speed > 150 ? 20 : 10; clearInterval(G.tick); G.tick = setInterval(gameStep, G.speed); toast("FASTER"); } }
     }
   }
   let row = "";
@@ -1054,7 +1068,7 @@ $("gShare").onclick = () => {
   const done = () => { $("gShare").textContent = "Copied"; setTimeout(() => $("gShare").textContent = "Copy my best", 2000); };
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, () => prompt("Copy this:", txt)); else prompt("Copy this:", txt);
 };
-$("gStop").onclick = () => { const sc = G.dead ? 0 : G.score; if (!G.dead) earn(G.score - G.paid, ""); G.paid = G.score; stopGame(); sayNow("Game over. By choice.", (sc ? "You scored " + sc + " and kept the coins. " : "") + "Your best is " + G.best + "."); };
+$("gStop").onclick = () => { const sc = G.dead ? 0 : G.score; if (!G.dead) earnGame(G.score - G.paid); G.paid = G.score; const pz = G.prize; G.prize = null; stopGame(); sayNow("Game over. By choice.", (sc ? "You scored " + sc + ". " : "") + "Your best is " + G.best + "."); if (pz) setTimeout(() => sayNow("You won me " + pz.name + "!", "I'm wearing it. Next prize: tomorrow."), 2700); };
 
 
 // ---------- the pet layer: coins, mood, shop, rooms, daily ----------
@@ -1066,7 +1080,7 @@ const ITEMS = [
   {id:"gold", name:"Gold hat", cost:90, kind:"outfit"},
   {id:"monocle", name:"Monocle", cost:120, kind:"outfit"},
   {id:"crown", name:"Crown", cost:200, kind:"outfit"},
-  {id:"attic", name:"The attic", cost:50, kind:"room", deco:[["🕸",6,8],["📦",8,78],["🕯",88,70],["🕸",90,6]]},
+  {id:"attic", name:"The attic", cost:50, kind:"room", deco:[["🕸",6,8],["📦",8,78],["🕯",88,70],["🕸",93,34]]},
   {id:"office", name:"An office", cost:80, kind:"room", deco:[["🪴",6,74],["🗄",90,72],["☕",14,86],["🖼",86,18]]},
   {id:"beach", name:"The beach", cost:120, kind:"room", deco:[["🌴",4,66],["☀",88,8],["🐚",86,84],["⛱",10,84]]},
   {id:"space", name:"Space", cost:250, kind:"room", deco:[["🪐",8,14],["🌙",88,12],["🛰",84,76],["☄",14,72]]}
@@ -1081,6 +1095,7 @@ function coinPop(n, why){
   setTimeout(() => el.remove(), 2900);
 
 }
+function once(id, n){ const d = new Date().toDateString(), k = "once_" + id; if (store.get(k, "") === d) return false; store.set(k, d); earn(n, ""); return true; }
 function earn(n, why){ if (n <= 0) return; coins += n; if (typeof dayStat === "function") dayStat("coins", n); save(); renderHud(); if ($("shop").classList.contains("open")) renderShop(); coinPop(n, why); }
 function applyOutfit(){
   ["hat","bowtie","shades","stache","gold","monocle","crown"].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = worn.includes(id) ? "" : "none"; });
@@ -1120,10 +1135,11 @@ function renderShop(){
     });
   });
 }
+$("moodHelp").onclick = () => sayNow("Mood: " + Math.round(mood01) + "%.", "Goes up while you look at me, down 2 an hour while you're away. A day streak lifts it. At 70%+, I pay 2 coins a minute instead of 1.");
 $("stareBtn").onclick = () => { if (stare) return; sayNow("Staring contest.", "Don't move your mouse for 8 seconds. Go."); stare = Date.now(); setMood("worried", 9000); lookAt(innerWidth/2, innerHeight/2); };
 $("shopBtn").onclick = () => { renderShop(); $("shop").classList.add("open"); };
 $("shopClose").onclick = () => $("shop").classList.remove("open");
-$("playBtn").onclick = () => { if (!gameOn) startGame(); pointAtTitle(); sayNow("Title game!", "It plays in my tab title. Jump over ▲ with Space. Every point is a coin. Every 5 points it gets faster."); };
+$("playBtn").onclick = () => { if (!gameOn) startGame(); pointAtTitle(); sayNow("Title game!", "It plays in my tab title. Jump over ▲ with Space. Every point is a coin, up to 60 a day. Every 5 points it gets faster. One prize a day."); };
 
 // mood: real attention. Goes up while you look at me, down by real time you're away or I'm closed.
 let mood01 = store.get("mood", 60);
@@ -1137,7 +1153,7 @@ function renderHud(){
 let coinMin = 0;
 setInterval(() => {
   if (document.hidden){ mood01 = Math.max(10, mood01 - 2/3600); }        // 2 points an hour, same as when I am closed, never below 10
-  else { mood01 = Math.min(100, mood01 + 0.25); coinMin += 1; if (coinMin >= 60){ coinMin = 0; earn(1, "a minute with me"); job("stay"); } } // +1 point every 4 seconds of company
+  else { mood01 = Math.min(100, mood01 + 0.25); coinMin += 1; if (coinMin >= 60){ coinMin = 0; earn(mood01 >= 70 ? 2 : 1, "a minute with me"); job("stay"); } } // +1 point every 4 seconds of company
   if (!forgot) store.set("mood", mood01);
   renderHud();
 }, 1000);
@@ -1157,13 +1173,14 @@ const JOBS = [
   {id:"nap", text:"Let me nap {n} time", n:[1]},
   {id:"run", text:"Score {n}+ in one title-game run", n:[6,9,12]},
   {id:"long", text:"Leave me alone 30s+, {n} times", n:[1,2]},
-  {id:"stay", text:"Spend {n} minutes with me", n:[3,5]}
+  {id:"stay", text:"Spend {n} minutes with me", n:[3,5]},
+  {id:"dialog", text:"Say yes to all 5 \"are you sure\" questions", n:[1]}
 ];
 function todaysJobs(){
   const d = new Date(), seed0 = d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate();
   let seed = seed0; const rand = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
   const pool = JOBS.slice(), out = [];
-  while (out.length < 3){ const j = pool.splice(Math.floor(rand() * pool.length), 1)[0]; out.push({id:j.id, need:j.n[Math.floor(rand() * j.n.length)], text:j.text}); }
+  while (out.length < 3){ const j = pool.splice(Math.floor(rand() * pool.length), 1)[0]; if ((j.id === "esc" || j.id === "mod") && out.some(o => o.id === "esc" || o.id === "mod")) continue; out.push({id:j.id, need:j.n[Math.floor(rand() * j.n.length)], text:j.text}); }
   return out;
 }
 let jobs, jobProg;
@@ -1195,6 +1212,7 @@ function lastDayReport(){
   bits.push("you earned " + ds.coins + " coins");
   return when + ": " + bits.join(", ") + ".";
 }
+function whenVisible(ms, fn){ const go = () => setTimeout(() => { if (document.hidden) return whenVisible(ms, fn); fn(); }, ms); if (!document.hidden) return go(); const h = () => { if (!document.hidden){ document.removeEventListener("visibilitychange", h); go(); } }; document.addEventListener("visibilitychange", h); }
 function runDaily(){
   loadJobs();
   const last = store.get("bonusDay", "");
@@ -1206,13 +1224,14 @@ function runDaily(){
     store.set("bonusDay", today);
     const firstEver = !store.get("welcomed", false); store.set("welcomed", true);
     const bonus = firstEver ? 25 : Math.min(50, 10 * streakN);
-    setTimeout(() => {
-      earn(bonus, firstEver ? "first visit ever" : "daily visit, day " + streakN + " in a row");
+    earn(bonus, firstEver ? "first visit ever" : "daily visit, day " + streakN + " in a row");
+    if (streakN > 1) mood01 = Math.min(100, mood01 + 10 * Math.min(5, streakN));
+    whenVisible(2500, () => {
       if (firstEver){ toast("WELCOME: +25 COINS"); say("Here. 25 coins.", "Spend them in the Shop, on me. There are 3 new jobs every day for more."); return; }
       toast(streakN > 1 ? "DAY " + streakN + " IN A ROW: +" + bonus + " COINS" : "FIRST VISIT TODAY: +" + bonus + " COINS");
-      if (streakN > 1) say("Day " + streakN + " in a row.", "That's +" + bonus + " coins. " + (bonus < 50 ? "Come back tomorrow and it goes up, to a max of 50." : "That's the max. It stays at 50 a day while the streak lasts."));
+      if (streakN > 1) say("Day " + streakN + " in a row.", "That's +" + bonus + " coins, my mood went up " + 10 * Math.min(5, streakN) + ", and my plant grew. " + (bonus < 50 ? "Come back tomorrow and it goes up, to a max of 50." : "That's the max. It stays at 50 a day while the streak lasts."));
       else say("+" + bonus + " coins for visiting today.", "Come back tomorrow: two days in a row pays 20, and my plant grows.");
-    }, 2500);
+    });
   }
   renderDaily();
 }
@@ -1237,6 +1256,7 @@ function drawPlant(){
   let el = $("plant"); if (!el){ el = document.createElement("div"); el.id = "plant"; $("faceWrap").appendChild(el); }
   const stage = Math.min(PLANT.length - 1, daysSeen - 1);
   el.textContent = PLANT[stage]; el.title = "Grows on each different day you visit. Days so far: " + daysSeen + ".";
+  el.onclick = () => sayNow(stage >= PLANT.length - 1 ? "My plant is fully grown." : "My plant grows a little each day you visit.", "Different days so far: " + daysSeen + "." + (stage < PLANT.length - 1 ? " Fully grown on day " + PLANT.length + "." : ""));
 }
 // extra ways that only open up on later days
 const BONUS = [
@@ -1250,8 +1270,10 @@ let bonusFound = store.get("bonus", []); if (!Array.isArray(bonusFound)) bonusFo
 function renderBonus(){
   let el = $("bonusways"); if (!el){ el = document.createElement("div"); el.id = "bonusways"; el.className = "mono"; $("secrets").after(el); }
   const open = BONUS.filter(b => daysSeen >= b.day), next = BONUS.find(b => daysSeen < b.day);
-  el.textContent = (open.length ? "Later-day ways: " + open.map(b => bonusFound.includes(b.id) ? "✓ " + b.name : "? " + b.hint).join("  ·  ") + "." : "") +
-    (next ? " More ways open on day " + next.day + " of visiting." : " That's all of them.");
+  el.innerHTML = ""; const a = document.createElement("span"), b2 = document.createElement("span");
+  a.textContent = open.length ? "Later-day ways (20 coins each): " + open.map(b => bonusFound.includes(b.id) ? "✓ " + b.name : "? " + b.hint).join("  ·  ") + "." : "";
+  b2.textContent = next ? "More ways open on day " + next.day + " of visiting." : "That's all the later-day ways.";
+  if (a.textContent) el.appendChild(a); el.appendChild(b2);
 }
 function bonus(id){
   const b = BONUS.find(b => b.id === id); if (!b || daysSeen < b.day || bonusFound.includes(id)) return false;
@@ -1303,7 +1325,8 @@ function drawBandages(n){
 (function start(){
   let nav = ""; try { nav = (performance.getEntriesByType("navigation")[0] || {}).type || ""; } catch(e){}
   const lastSeen = store.get("lastSeen", 0), lastStay = store.get("lastStay", 0);
-  if (nav === "reload" && visit > 1){
+  let ssReload = false; try { const u = +sessionStorage.getItem("dcttpet_unload") || 0; ssReload = u && Date.now() - u < 4000 && nav !== "back_forward" && nav !== "navigate"; } catch(e){}
+  if ((nav === "reload" || ssReload) && visit > 1){
     const n = reloads + 1; store.set("reloads", n); drawBandages(n);
     attempt(); const first = find("reload"); log("Reloaded. Visit #" + visit + ".");
     setMood("shock", 2000);
@@ -1315,9 +1338,10 @@ function drawBandages(n){
     log("Last visit lasted " + dur(lastStay) + " and ended " + words(Date.now() - lastSeen) + " ago.");
     setMood("happy", 2500);
     const away = Date.now() - lastSeen;
-    if (away > 36e5){ $("cobweb").classList.add("on"); setTimeout(() => $("cobweb").classList.remove("on"), 6000); setMood("sulk", 3500); }
-    sayNow(away > 36e5 ? "Oh. It's you." : "You came back!", "You closed me " + words(away) + " ago. I don't remember anything after that. Tabs don't.");
-    say("My mood is " + Math.round(mood01) + "%.", away > 36e5 ? "It drops 2 points for every hour I am closed. Stay a bit and it comes back up." : "Stay and it goes up.");
+    const stk = store.get("streak", 1);
+    if (away > 36e5){ $("cobweb").classList.add("on"); setTimeout(() => $("cobweb").classList.remove("on"), 6000); if (stk < 2) setMood("sulk", 3500); }
+    sayNow(stk > 1 && away > 36e5 ? "You're back! Day " + stk + " in a row." : away > 36e5 ? "Oh. It's you." : "You came back!", "You closed me " + words(away) + " ago. I don't remember anything after that. Tabs don't.");
+    say("My mood is " + Math.round(mood01) + "%.", away > 36e5 ? "It drops 2 points for every hour I'm closed" + (stk > 1 ? ", and goes up for your streak" : "") + ". Stay and it rises. At 70%, I pay 2 coins a minute." : "Stay and it goes up. At 70%, I pay 2 coins a minute.");
     if (found.length) say(found.length + " of 10 found.", "Your list is still here.");
     return;
   }
